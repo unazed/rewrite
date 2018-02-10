@@ -15,12 +15,16 @@ class BotInstance(Bot):
         # load commands
         commands_dir = config.commands_dir
         ext = ".py"
+        self.remove_command("help")
         for file_name in os.listdir(commands_dir):
             if not file_name.endswith(ext):
                 continue
 
             command_name = file_name[:-len(ext)]
             self.load_extension(f"{commands_dir}.{command_name}")
+
+    async def on_ready(self):
+        print("!! ready !!")
 
     async def on_message(self, msg):
         if msg.author.bot:
