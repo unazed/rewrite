@@ -1,0 +1,8 @@
+{
+  "token": "TOKEN_HERE",
+  "owners": [ 205346839082303488, 389197149616865280, 119516995908534272 ],
+  "commands_dir": "commands",
+  "defaults": {
+    "prefix": "!"
+  }
+}
