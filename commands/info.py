@@ -22,7 +22,7 @@ class Info:
         embed.set_footer(text=f"Created by init0#8366, flamekong#0009 & repyh#2900 using discord.py")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["stats", "botinfo"])
     async def info(self, ctx):
         embed = discord.Embed(title="Himebot - Statistics", colour=0xff3f3f)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
