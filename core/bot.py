@@ -7,15 +7,16 @@ import os
 class BotInstance(Bot):
     COLOR = 0xff3f3f
 
-    def __init__(self, owners):
-        # TODO: get prefix from server settings db
-        super().__init__(loop=asyncio.get_event_loop(),
-                         command_prefix=config.default_prefix)
-        self.prefix = config.default_prefix
-        self.owners = owners
-        
+    def __init__(self, bot_settings, **kwargs):
+        super().__init__(loop=asyncio.get_event_loop(), command_prefix=config.default_prefix, **kwargs)
+        self.bot_settings = bot_settings
+        self.prefix = bot_settings.prefix
+        self.owners = bot_settings.owners
+
+    async def on_ready(self):
+        print("!! ready !!")
         # load commands
-        commands_dir = config.commands_dir
+        commands_dir = "commands"
         ext = ".py"
         self.remove_command("help")
         for file_name in os.listdir(commands_dir):
@@ -24,9 +25,6 @@ class BotInstance(Bot):
 
             command_name = file_name[:-len(ext)]
             self.load_extension(f"{commands_dir}.{command_name}")
-
-    async def on_ready(self):
-        print("!! ready !!")
 
     async def on_message(self, msg):
         if msg.author.bot:

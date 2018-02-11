@@ -1,6 +1,6 @@
 import discord
 import time
-import psutil # System info
+import psutil  # System info
 from discord.ext import commands
 
 from core.bot import BotInstance
@@ -9,7 +9,7 @@ from core.bot import BotInstance
 class Info:
     def __init__(self, bot):
         self.bot = bot
-        self.process = psutil.Process() #Later for RAM usage
+        self.process = psutil.Process()  # Later for RAM usage
 
     @commands.command()
     async def ping(self, ctx):
@@ -49,22 +49,20 @@ class Info:
         embed.add_field(name="Memory Used", value="placeholder", inline=True)  # psutil
         embed.add_field(name="Total Memory", value="placeholder", inline=True)  # psutil
         embed.add_field(name="Shard", value="placeholder", inline=True)
-        embed.add_field(name="Users who've used bot", value="placeholder", inline=True)
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["invite"])
     async def links(self, ctx):
-        e=discord.Embed(description=
-                        ("[Add to your server](https://discordapp.com/oauth2/authorize"
-                        "?client_id=232916519594491906&scope=bot&permissions=40)\n"
-                        "[Join Hime's server](https://discord.gg/tfAMfX4)\n"
-                        "[Hime's Website](https://himebot.xyz/)\n"
-                        "[Hime's Patreon](https://www.patreon.com/himebot)"),
-        colour=0xff3f3f)
+        e = discord.Embed(description=
+                          ("[Add to your server](https://discordapp.com/oauth2/authorize"
+                           "?client_id=232916519594491906&scope=bot&permissions=40)\n"
+                           "[Join Hime's server](https://discord.gg/tfAMfX4)\n"
+                           "[Hime's Website](https://himebot.xyz/)\n"
+                           "[Hime's Patreon](https://www.patreon.com/himebot)"),
+                          colour=BotInstance.COLOR)
         e.set_thumbnail(url=self.bot.user.avatar_url)
         await ctx.send(embed=e)
 
 
 def setup(bot):
     bot.add_cog(Info(bot))
-
