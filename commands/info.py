@@ -1,5 +1,6 @@
 import discord
 import time
+import psutil # System info
 from discord.ext import commands
 
 from core.bot import BotInstance
@@ -8,6 +9,7 @@ from core.bot import BotInstance
 class Info:
     def __init__(self, bot):
         self.bot = bot
+        self.process = psutil.Process() #Later for RAM usage
 
     @commands.command()
     async def ping(self, ctx):
@@ -43,6 +45,7 @@ class Info:
         embed.add_field(name="Server Count", value=f"{len(self.bot.guilds)}", inline=True)
         embed.add_field(name="User Count", value=f"{len(self.bot.users)}", inline=True)
         embed.add_field(name="Uptime", value="placeholder", inline=True)  # Do this later
+        embed.add_field(name="CPU Usage", value=f"{psutil.cpu_percent()}%", inline=True)
         embed.add_field(name="Memory Used", value="placeholder", inline=True)  # psutil
         embed.add_field(name="Total Memory", value="placeholder", inline=True)  # psutil
         embed.add_field(name="Shard", value="placeholder", inline=True)
