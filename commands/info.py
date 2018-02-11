@@ -60,7 +60,7 @@ class Info:
                         "[Join Hime's server](https://discord.gg/tfAMfX4)\n"
                         "[Hime's Website](https://himebot.xyz/)\n"
                         "[Hime's Patreon](https://www.patreon.com/himebot)"),
-        colour=0xff3f3f)
+        colour=BotInstance.COLOR)
         e.set_thumbnail(url=self.bot.user.avatar_url)
         await ctx.send(embed=e)
 
