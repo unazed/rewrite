@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from core.bot import BotInstance
+
 
 class Info:
     def __init__(self, bot):
@@ -14,7 +16,7 @@ class Info:
     async def help(self, ctx):
         embed = discord.Embed(title="Himebot - The only music bot you'll ever need",
                               description="For extra support, join [Hime's support server](https://discord.gg/BCAF7rH)",
-                              colour=0xff3f3f)
+                              colour=BotInstance.COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         embed.add_field(name="Commands",
                         value="Hime's complete commands list could be"
@@ -25,9 +27,9 @@ class Info:
         embed.set_footer(text=f"Created by init0#8366, flamekong#0009 & repyh#2900 using discord.py")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["botinfo", "stats"])
     async def info(self, ctx):
-        embed = discord.Embed(title="Himebot - Statistics", colour=0xff3f3f)
+        embed = discord.Embed(title="Himebot - Statistics", colour=BotInstance.COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         embed.add_field(name="Playing on", value=f"{1} servers", inline=True)  # placeholder
         embed.add_field(name="Server Count", value=f"{len(self.bot.guilds)}", inline=True)
@@ -38,6 +40,10 @@ class Info:
         embed.add_field(name="Shard", value="placeholder", inline=True)
         embed.add_field(name="Users who've used bot", value="placeholder", inline=True)
         await ctx.send(embed=embed)
+
+    @commands.command(aliases=["invite"])
+    async def links(self, ctx):
+        pass
 
 
 def setup(bot):

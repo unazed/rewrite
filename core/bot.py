@@ -5,6 +5,8 @@ import os
 
 
 class BotInstance(Bot):
+    COLOR = 0xff3f3f
+
     def __init__(self, owners):
         # TODO: get prefix from server settings db
         super().__init__(loop=asyncio.get_event_loop(),
