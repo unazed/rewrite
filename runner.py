@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 import asyncio
 
-from core.bot import BotInstance
-from utils.DB.SettingsDB import SettingsDB
+from core.bot import Bot
+from utils.DB.db import SettingsDB
 
 loop = asyncio.get_event_loop()
 
 
 def run(bs, **kwargs):
-    tasks = (BotInstance(bs, **kwargs).run(bs.token), )
+    tasks = (Bot(bs, **kwargs).run(bs.token),)
     loop.run_until_complete(asyncio.gather(*tasks))
 
 
@@ -22,4 +22,4 @@ if __name__ == "__main__":
     """
     db = SettingsDB()
     bot_settings = loop.run_until_complete(db.get_bot_settings())
-    run(bot_settings)
+    run(bot_settings, loop=loop)

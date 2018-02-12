@@ -1,14 +1,15 @@
-from discord.ext.commands import Bot
-from utils import config
-import asyncio
 import os
 
+from discord.ext.commands import AutoShardedBot
 
-class BotInstance(Bot):
+from utils import config
+
+
+class Bot(AutoShardedBot):
     COLOR = 0xff3f3f
 
     def __init__(self, bot_settings, **kwargs):
-        super().__init__(loop=asyncio.get_event_loop(), command_prefix=config.default_prefix, **kwargs)
+        super().__init__(command_prefix=config.default_prefix, **kwargs)
         self.bot_settings = bot_settings
         self.prefix = bot_settings.prefix
         self.owners = bot_settings.owners
