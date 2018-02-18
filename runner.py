@@ -2,7 +2,7 @@
 import asyncio
 
 from core.bot import Bot
-from utils.DB.db import SettingsDB
+from utils.DB import SettingsDB
 
 loop = asyncio.get_event_loop()
 
@@ -20,6 +20,6 @@ if __name__ == "__main__":
 
     if you don't have a proper DB set up
     """
-    db = SettingsDB()
+    db = SettingsDB.get_instance()
     bot_settings = loop.run_until_complete(db.get_bot_settings())
     run(bot_settings, loop=loop)

@@ -3,7 +3,7 @@ import time
 import psutil  # System info
 from discord.ext import commands
 
-from core.bot import BotInstance
+from core.bot import Bot
 
 
 class Info:
@@ -19,14 +19,14 @@ class Info:
         # Singles quotes to match my relationship status
         fmt = '\U0001f3d3 **Pong!** `{}ms`'.format(str(round((t2 - t1) * 100)))
         # An embed for 7 letters, yes
-        em = discord.Embed(description=fmt, color=BotInstance.COLOR)
+        em = discord.Embed(description=fmt, color=Bot.COLOR)
         await ctx.send(embed=em)
 
     @commands.command()
     async def help(self, ctx):
         embed = discord.Embed(title="Himebot - The only music bot you'll ever need",
                               description="For extra support, join [Hime's support server](https://discord.gg/BCAF7rH)",
-                              colour=BotInstance.COLOR)
+                              colour=Bot.COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         embed.add_field(name="Commands",
                         value="Hime's complete commands list could be"
@@ -39,7 +39,7 @@ class Info:
 
     @commands.command(aliases=["botinfo", "stats"])
     async def info(self, ctx):
-        embed = discord.Embed(title="Himebot - Statistics", colour=BotInstance.COLOR)
+        embed = discord.Embed(title="Himebot - Statistics", colour=Bot.COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         embed.add_field(name="Playing on", value=f"{1} servers", inline=True)  # placeholder
         embed.add_field(name="Server Count", value=f"{len(self.bot.guilds)}", inline=True)
@@ -59,7 +59,7 @@ class Info:
                            "[Join Hime's server](https://discord.gg/tfAMfX4)\n"
                            "[Hime's Website](https://himebot.xyz/)\n"
                            "[Hime's Patreon](https://www.patreon.com/himebot)"),
-                          colour=BotInstance.COLOR)
+                          colour=Bot.COLOR)
         e.set_thumbnail(url=self.bot.user.avatar_url)
         await ctx.send(embed=e)
 

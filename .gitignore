@@ -92,3 +92,4 @@ ENV/
 .ropeproject
 
 config.json
+/utils/config.py

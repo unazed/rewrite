@@ -1,9 +1,9 @@
-from abc import ABCMeta
+from abc import ABC
 
 
-class Settings(metaclass=ABCMeta):
-    def __init__(self, id):
-        self._id = id
+class Settings(ABC):
+    def __init__(self, id_):
+        self._id = id_
 
 
 class GuildSettings(Settings):
@@ -30,3 +30,5 @@ class BotSettings(Settings):
         self.game = kwargs.get("game")
         self.token = kwargs.get("token")
         self.geniusToken = kwargs.get("geniusToken")
+        self.lavaPass = kwargs.get("lavaPass")
+        self.lavaHost = kwargs.get("lavaHost")

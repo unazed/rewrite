@@ -1,14 +1,22 @@
 import motor.motor_asyncio
 
-from utils.DB.Settings import GuildSettings, BotSettings
+from utils.DB.settings import GuildSettings, BotSettings
 
 
 class SettingsDB:
+    _instance = None
+
     def __init__(self):
         self.client = motor.motor_asyncio.AsyncIOMotorClient("localhost", 27017)
         self.db = self.client.local
         self.guild_settings_col = self.db.settings
         self.bot_settings_col = self.db.bot_settings
+
+    @staticmethod
+    def get_instance():
+        if not SettingsDB._instance:
+            SettingsDB._instance = SettingsDB()
+        return SettingsDB._instance
 
     async def get_bot_settings(self):
         document = await self.bot_settings_col.find_one({"_id": "0"})
