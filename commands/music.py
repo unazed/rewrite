@@ -90,6 +90,23 @@ class Music:
         player.event_adapter.shuffle()
         await ctx.send()
 
+    @commands.command(aliases=["s"])
+    @music_check(playing=True)
+    async def skip(self, ctx):
+        player = self.bot.lavalink.players.get(ctx.guild.id)
+        handler = player.event_adapter
+        listeners = list(filter(lambda m: not m.bot and not (m.voice.deaf or m.voice.self_deaf),
+                                player.connected_channel.members))
+        skips_needed = round(len(listeners)*0.5)
+        current_skips = len(player.skips)
+        if handler.current.requester == ctx.author or current_skips+1 >= skips_needed:
+            await handler.skip()
+            await ctx.send(f"{SUCCESS} The current song has been skipped")
+        else:
+            handler.skips.add(ctx.author)
+            await ctx.send(f"{SUCCESS} You have voted to skip this song, "
+                           f"`{current_skips-skips_needed}` more skips are needed to skip")
+
 
 def setup(bot):
     bot.add_cog(Music(bot))

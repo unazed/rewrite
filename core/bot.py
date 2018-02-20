@@ -1,7 +1,5 @@
 import asyncio
 import os
-import sys
-import traceback
 
 from discord.ext.commands import AutoShardedBot, MissingRequiredArgument, CommandNotFound, NoPrivateMessage
 
@@ -19,8 +17,7 @@ class Bot(AutoShardedBot):
         self.owners = bot_settings.owners
 
     async def on_ready(self):
-        print("!! ready !!")
-        # load commands
+        print(f"!! Ready, shard {self.shard_id}/{self.shard_count} !!")
         commands_dir = "commands"
         ext = ".py"
         self.remove_command("help")
