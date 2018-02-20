@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../Lavalink.py/.idea/Lavalink.py.iml" filepath="$PROJECT_DIR$/../Lavalink.py/.idea/Lavalink.py.iml" />
+      <module fileurl="file:///tmp/lavalink/.idea/lavalink.iml" filepath="/tmp/lavalink/.idea/lavalink.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../math/.idea/math.iml" filepath="$PROJECT_DIR$/../math/.idea/math.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/rewrite.iml" filepath="$PROJECT_DIR$/.idea/rewrite.iml" />
+    </modules>
+  </component>
+</project>

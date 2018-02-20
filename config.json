@@ -1,8 +1,0 @@
-{
-  "token": "MjMxNDM1NDI3MjQyOTY3MDQx.DD1oxg.dxug4yFXw94oXglmbR9cAjOnNqc",
-  "owners": [ 205346839082303488, 389197149616865280, 119516995908534272 ],
-  "commands_dir": "commands",
-  "defaults": {
-    "prefix": "!"
-  }
-}
