@@ -8,7 +8,7 @@ from core.bot import Bot
 
 class Info:
     def __init__(self, bot):
-        self.bot = bot
+        self.bot = bot # flamekong was here xdddddddddddddd
         self.process = psutil.Process()  # Later for RAM usage
 
     @commands.command()
