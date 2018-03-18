@@ -34,7 +34,7 @@ class Info:
         embed.add_field(name="Getting Started",
                         value="To get started using the Hime, join a voice channel and then use the play command: `.pl"
                               "ay [song name]`the bot will then join the channel and play the requested song!")
-        embed.set_footer(text=f"Created by init0#8366, flamekong#0009 & repyh#2900 using discord.py")
+        embed.set_footer(text=f"Created by init0#8366, flamekong#0009 & repyh#2900 using discord.py@v1.0 Rewrite")
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["botinfo", "stats"])
