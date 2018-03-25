@@ -1,43 +1,19 @@
 from collections import deque
-from enum import Enum
 from random import shuffle
-
 import discord
-from math import ceil
 
-from core.bot import Bot
-from utils.lavalink import Client, TrackPauseEvent, TrackResumeEvent, TrackStartEvent, TrackEndEvent, \
-    AbstractPlayerEventAdapter, TrackExceptionEvent, TrackStuckEvent, format_time, AudioTrack, LogLevel
-from utils.visual import NOTES, Paginator
 from utils.DB import SettingsDB
+from utils.magma.core import TrackPauseEvent, TrackResumeEvent, TrackStartEvent, TrackEndEvent, \
+    AbstractPlayerEventAdapter, TrackExceptionEvent, TrackStuckEvent, format_time
+from utils.music import UserData, Enqueued
+from utils.visual import NOTES, COLOR
 
 
-class UserData(Enum):
-    STOPPED = 0
-    SKIPPED = 1
-    SKIPPED_TO = 2
-    UNCHANGED = 3
-    REPLACED_AUTOPLAY = 4
-
-    @property
-    def may_start_next(self):
-        return self.value > 0
-
-
-class Enqueued:
-    def __init__(self, track, requester):
-        self.track = track
-        self.requester = requester
-        self.finished = False
-
-    def __str__(self):
-        return f"{self.track.title} (`{format_time(self.track.duration)}`)"
-
-
-class PlayerHandler(AbstractPlayerEventAdapter):
-    def __init__(self, ctx, player):
+class MusicPlayer(AbstractPlayerEventAdapter):
+    def __init__(self, ctx, link):
         self.ctx = ctx
-        self.player = player
+        self.link = link
+        self.player = link.player
         self.bot = ctx.bot
         self.guild = ctx.guild
         self.skips = set()
@@ -46,6 +22,8 @@ class PlayerHandler(AbstractPlayerEventAdapter):
         self.current = None
         self.previous = None
 
+        link.player.event_adapter = self
+
     def embed_current(self):
         track = self.current.track
         title = track.title
@@ -53,7 +31,7 @@ class PlayerHandler(AbstractPlayerEventAdapter):
         requester = self.current.requester.name
         progress = f"{format_time(self.player.position)}/{format_time(track.duration)}"
 
-        embed = discord.Embed(description=f"[{title}]({url})", color=Bot.COLOR) \
+        embed = discord.Embed(description=f"[{title}]({url})", color=COLOR) \
             .set_author(name="Now playing", icon_url=self.current.requester.avatar_url) \
             .add_field(name="Requested by", value=requester, inline=True) \
             .add_field(name="Progress", value=progress, inline=True)
@@ -66,6 +44,12 @@ class PlayerHandler(AbstractPlayerEventAdapter):
 
     def clear(self):
         self.queue.clear()
+
+    def move(self, to_move, pos):
+        moved = self.queue[to_move]
+        self.queue.remove(moved)
+        self.queue.insert(pos, moved)
+        return moved
 
     async def add_track(self, audio_track, requester):
         return await self.add_enqueued(Enqueued(audio_track, requester))
@@ -88,6 +72,11 @@ class PlayerHandler(AbstractPlayerEventAdapter):
 
     async def skip(self):
         self.player.current.user_data = UserData.SKIPPED
+        await self.player.stop()
+
+    async def skip_to(self, pos):
+        self.player.current.user_data = UserData.SKIPPED
+        self.queue = deque(list(self.queue)[pos:])
         await self.player.stop()
 
     async def track_pause(self, event: TrackPauseEvent):
@@ -137,47 +126,3 @@ class PlayerHandler(AbstractPlayerEventAdapter):
     async def track_stuck(self, event: TrackStuckEvent):
         pass
 
-
-class QueuePaginator(Paginator):
-    def __init__(self, **kwargs):
-        player_handler = kwargs.pop("player_handler")
-        self.items = player_handler.queue
-        super().__init__(items=self.items, **kwargs)
-
-    @property
-    def embed(self):
-        items = list(self.items)
-        lower_bound = self.page*self.items_per_page
-        upper_bound = lower_bound+self.items_per_page
-        desc = f"**Up next:**\n{items.pop(0)}\n\n"
-        to_display = items[lower_bound:upper_bound]
-
-        for i in to_display:
-            desc += f"`{to_display.index(i)+lower_bound+2}.` {i}\n"
-
-        embed = discord.Embed(color=self.color, description=desc)\
-            .set_footer(text=f"Page: {self.page+1}/{self.pages_needed} | "
-                             f"Total duration: {format_time(sum(i.track.duration for i in items))}")
-        return embed
-
-
-class PlayerHandlerManager:
-    def __init__(self, bot):
-        bot.player_handler_manager = self
-        self.bot = bot
-        self.lavalink_client = Client(bot=bot, port=8080, log_level=LogLevel.debug,
-                                      password='youshallnotpass', loop=self.bot.loop)
-        self.lavalink = self.bot.lavalink
-        self.player_handlers = {}
-
-    async def get_player_handler(self, ctx):
-        if not ctx:
-            return self.lavalink.players.get(ctx.guild.id, None)
-        player = self.lavalink.players.get(ctx.guild.id)
-        if not player.event_adapter:
-            player.event_adapter = PlayerHandler(ctx, player)
-        return player.event_adapter
-
-    async def search(self, query):
-        tracks = await self.lavalink_client.get_tracks(query)
-        return [AudioTrack(track) for track in tracks]

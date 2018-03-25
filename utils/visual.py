@@ -3,6 +3,7 @@ from asyncio import futures
 import discord
 import math
 
+COLOR = 0x728fff
 SUCCESS = "\u2611"
 WARNING = "\u26A0"
 ERROR = "\u274C"
@@ -20,7 +21,7 @@ class Paginator:
         self.ctx = kwargs.pop("ctx")
         self.items = kwargs.pop("items")
         self.items_per_page = kwargs.pop("items_per_page", 10)
-        self.color = kwargs.pop("color", self.ctx.bot.COLOR)
+        self.color = kwargs.pop("color", COLOR)
         self.timeout = kwargs.pop("timeout", 180.0)
         self.page = kwargs.pop("page", 0)
         self.bot = self.ctx.bot

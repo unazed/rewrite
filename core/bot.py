@@ -1,32 +1,50 @@
 import asyncio
+from datetime import datetime
 import os
 
-from discord.ext.commands import AutoShardedBot, MissingRequiredArgument, CommandNotFound, NoPrivateMessage
+import logging
+from discord.ext.commands import AutoShardedBot, MissingRequiredArgument, CommandNotFound, NoPrivateMessage, NotOwner
 
+from audio.player_manager import MusicPlayerManager
 from utils.exceptions import CustomCheckFailure
 from utils.visual import WARNING
 
 
 class Bot(AutoShardedBot):
-    COLOR = 0x728fff
 
     def __init__(self, bot_settings, **kwargs):
         super().__init__(command_prefix=bot_settings.prefix, **kwargs)
+        self.logger = logging.getLogger("bot")
+        self.start_time = datetime.now()
         self.bot_settings = bot_settings
         self.prefix = bot_settings.prefix
         self.owners = bot_settings.owners
+        self.mpm = None
+        self.ready = False
+
+        logging.basicConfig(format="%(levelname)s -- %(name)s.%(funcName)s : %(message)s", level=logging.INFO)
 
     async def on_ready(self):
-        print(f"!! Ready, shard {self.shard_id}/{self.shard_count} !!")
-        commands_dir = "commands"
-        ext = ".py"
-        self.remove_command("help")
-        for file_name in os.listdir(commands_dir):
-            if not file_name.endswith(ext):
-                continue
+        self.logger.info("!! Logged in !!")
+        if not self.ready:
+            self.remove_command("help")
 
-            command_name = file_name[:-len(ext)]
-            self.load_extension(f"{commands_dir}.{command_name}")
+            self.mpm = MusicPlayerManager(self)
+            await self.mpm.lavalink.add_node("local", "ws://localhost:8080",
+                                             "http://localhost:2333", "youshallnotpass")
+
+            commands_dir = "commands"
+            ext = ".py"
+            for file_name in os.listdir(commands_dir):
+                if not file_name.endswith(ext):
+                    continue
+
+                command_name = file_name[:-len(ext)]
+                self.load_extension(f"{commands_dir}.{command_name}")
+            self.ready = True
+
+    async def on_shard_ready(self, shard_id):
+        self.logger.info(f"Shard: {shard_id}/{self.shard_count} is ready")
 
     async def on_message(self, msg):
         if msg.author.bot:
@@ -34,7 +52,7 @@ class Bot(AutoShardedBot):
         await self.process_commands(msg)
 
     async def on_command_error(self, context, exception):
-        if isinstance(exception, CommandNotFound):
+        if exception.__class__ in (CommandNotFound, NotOwner):
             return
         if isinstance(exception, CustomCheckFailure):
             msg = await context.send(exception.msg)

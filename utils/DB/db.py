@@ -27,7 +27,9 @@ class SettingsDB:
 
     async def get_guild_settings(self, id):
         document = await self.guild_settings_col.find_one({"_id": id})
-        return GuildSettings(document.get("_id"), **document)
+        if document:
+            return GuildSettings(document.get("_id"), **document)
+        return GuildSettings(id)
 
     async def set_guild_settings(self, settings):
         return await self.guild_settings_col.replace_one({"_id": settings._id}, settings.__dict__)

@@ -1,15 +1,17 @@
-from contextlib import redirect_stdout
-from discord.ext import commands
-from utils.misc import (cleanup_code, get_syntax_error)
 import inspect
 import io
 import traceback
+from contextlib import redirect_stdout
+
+from discord.ext import commands
+
+from utils.misc import (cleanup_code, get_syntax_error)
 
 
 class Eval(object):
     def __init__(self, bot):
         self.bot = bot
-        self.context = { "bot": self.bot, "phm": self.bot.player_handler_manager, "lava": self.bot.lavalink }
+        self.context = {"bot": self.bot}
         self.last_result = None
     
     @commands.command(aliases=["e"])
@@ -20,10 +22,11 @@ class Eval(object):
         result = ""
 
         self.context.update({
+            "self": ctx.guild.me,
             "ctx": ctx,
             "ch": ctx.channel,
             "author": ctx.author,
-            "srv": ctx.guild,
+            "guild": ctx.guild,
             "msg": ctx.message,
             "_": self.last_result
         })
@@ -46,7 +49,7 @@ class Eval(object):
             
             self.last_result = result
         
-        await ctx.send(f"```py\n{result}\n```")
+        await ctx.send(f"```py\n{str(result)[:1990]}\n```")
 
 
 def setup(bot):

@@ -1,9 +1,10 @@
 import discord
 import time
 import psutil  # System info
+from datetime import datetime
 from discord.ext import commands
 
-from core.bot import Bot
+from utils.visual import COLOR
 
 
 class Info:
@@ -19,14 +20,14 @@ class Info:
         # Singles quotes to match my relationship status
         fmt = '\U0001f3d3 **Pong!** `{}ms`'.format(str(round((t2 - t1) * 100)))
         # An embed for 7 letters, yes
-        em = discord.Embed(description=fmt, color=Bot.COLOR)
+        em = discord.Embed(description=fmt, color=COLOR)
         await ctx.send(embed=em)
 
     @commands.command()
     async def help(self, ctx):
         embed = discord.Embed(title="Himebot - The only music bot you'll ever need",
                               description="For extra support, join [Hime's support server](https://discord.gg/BCAF7rH)",
-                              colour=Bot.COLOR)
+                              colour=COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         embed.add_field(name="Commands",
                         value="Hime's complete commands list could be"
@@ -39,16 +40,15 @@ class Info:
 
     @commands.command(aliases=["botinfo", "stats"])
     async def info(self, ctx):
-        embed = discord.Embed(title="Himebot - Statistics", colour=Bot.COLOR)
+        playing_servers = len(self.bot.lavalink.players.find_all(lambda p: p.is_playing))
+
+        embed = discord.Embed(title="Himebot - Statistics", colour=COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
-        embed.add_field(name="Playing on", value=f"{1} servers", inline=True)  # placeholder
+        embed.add_field(name="Playing on", value=f"{playing_servers}", inline=True)  # placeholder
         embed.add_field(name="Server Count", value=f"{len(self.bot.guilds)}", inline=True)
-        embed.add_field(name="User Count", value=f"{len(self.bot.users)}", inline=True)
-        embed.add_field(name="Uptime", value="placeholder", inline=True)  # Do this later
-        embed.add_field(name="CPU Usage", value=f"{psutil.cpu_percent()}%", inline=True)
-        embed.add_field(name="Memory Used", value="placeholder", inline=True)  # psutil
-        embed.add_field(name="Total Memory", value="placeholder", inline=True)  # psutil
-        embed.add_field(name="Shard", value="placeholder", inline=True)
+        embed.add_field(name="Uptime", value=f"{str(datetime.now()-self.bot.start_time).split('.')[0]}", inline=True)  # Do this later
+        if ctx.guild:
+            embed.add_field(name="Shard", value=f"{ctx.guild.shard_id}/{self.bot.shard_count}", inline=True)
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["invite"])
@@ -59,7 +59,7 @@ class Info:
                            "[Join Hime's server](https://discord.gg/tfAMfX4)\n"
                            "[Hime's Website](https://himebot.xyz/)\n"
                            "[Hime's Patreon](https://www.patreon.com/himebot)"),
-                          colour=Bot.COLOR)
+                          colour=COLOR)
         e.set_thumbnail(url=self.bot.user.avatar_url)
         await ctx.send(embed=e)
 
