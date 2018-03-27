@@ -50,6 +50,7 @@ class Paginator:
             if self.msg:
                 await self.msg.edit(embed=self.embed)
                 if self.pages_needed < 2:
+                    await self.msg.clear_reactions()
                     break
             else:
                 self.msg = await self.ctx.send(embed=self.embed)

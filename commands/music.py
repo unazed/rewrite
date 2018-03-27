@@ -3,6 +3,8 @@ import random
 import discord
 from discord.ext import commands
 
+from utils.DB import SettingsDB
+from utils.magma.core import format_time
 from utils.music import music_check, QueuePaginator
 from utils.visual import ERROR
 from utils.visual import NOTES
@@ -94,7 +96,7 @@ class Music:
         mp.shuffle()
         await ctx.send(f"{SUCCESS} The queue has been shuffled")
 
-    @commands.command(aliases=["disconnect", "dc"])
+    @commands.command(aliases=["disconnect", "leave"])
     @music_check(in_channel=True, is_dj=True)
     async def stop(self, ctx):
         try:
@@ -105,6 +107,22 @@ class Music:
         except:
             pass
         await ctx.send(f"{SUCCESS} The player has been stopped and the bot has disconnected")
+
+    @commands.command(aliases=["rq", "clearqueue"])
+    @music_check(in_channel=True, playing=True, is_dj=True)
+    async def reset(self, ctx):
+        mp = self.mpm.get_music_player(ctx, False)
+        mp.clear()
+        await ctx.send(f"{SUCCESS} The queue has been cleared")
+
+    @commands.command(aliases=["r", "delete"])
+    @music_check(in_channel=True, playing=True, is_dj=True)
+    async def remove(self, ctx, pos: int):
+        pos -= 1
+        mp = self.mpm.get_music_player(ctx, False)
+        track = mp.queue[pos]
+        mp.queue.remove(track)
+        await ctx.send(f"{SUCCESS} The track: `{track.track.title}` has been removed")
 
     @commands.command(aliases=["jumpto", "jump"])
     @music_check(in_channel=True, playing=True, is_dj=True)
@@ -129,13 +147,67 @@ class Music:
         to_moved -= 1
         pos -= 1
         if not (0 <= to_moved < queue_len) and not (0 <= pos <= queue_len):
-            await ctx.send(f"{WARNING} The specified positions must be within `0-{queue_len}`!")
+            await ctx.send(f"{WARNING} The specified positions must be from `0-{queue_len}`!")
             return
         moved = mp.move(to_moved, pos)
         if pos == 0:
             await ctx.send(f"{SUCCESS} The track: {moved} has been moved to be played next")
         else:
             await ctx.send(f"{SUCCESS} The track: {moved} has been moved to position {pos+1}")
+
+    @commands.command(aliases=["vol"])
+    @music_check(playing=True, is_dj=True, is_donor="contributors")
+    async def volume(self, ctx, volume: int):
+        if not 0 <= volume <= 150:
+            await ctx.send(f"{WARNING} The specified volume must be from `0-150`!")
+            return
+
+        mp = self.mpm.get_music_player(ctx, False)
+        await mp.player.set_volume(volume)
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        settings.volume = volume
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The player volume has been set to `{volume}`")
+
+    @commands.command()
+    @music_check(playing=True, is_dj=True)
+    async def seek(self, ctx, duration: str):
+        mp = self.mpm.get_music_player(ctx, False)
+        current_pos = round(mp.player.position/1000)
+        try:
+            if ":" in duration:
+                splitted = duration.split(":")
+                pos = (int(splitted[0])*60+int(splitted[1]))*1000
+            else:
+                pos = (current_pos + int(duration))*1000
+        except ValueError:
+            await ctx.send(f"{WARNING} The specified duration must be a number!")
+            return
+
+        await mp.player.seek_to(pos)
+        await ctx.send(f"{SUCCESS} The current song has been seeked to `{format_time(pos)}`")
+
+    @commands.command(aliases=["p"])
+    @music_check(playing=True, is_dj=True)
+    async def pause(self, ctx):
+        mp = self.mpm.get_music_player(ctx, False)
+        if mp.player.paused:
+            await ctx.send(f"{WARNING} The player is already paused!")
+            return
+
+        await mp.player.set_paused(True)
+        await ctx.send(f"{SUCCESS} The player has been paused")
+
+    @commands.command(aliases=["re"])
+    @music_check(playing=True, is_dj=True)
+    async def resume(self, ctx):
+        mp = self.mpm.get_music_player(ctx, False)
+        if not mp.player.paused:
+            await ctx.send(f"{WARNING} The player is not paused!")
+            return
+
+        await mp.player.set_paused(False)
+        await ctx.send(f"{SUCCESS} The player has been resumed")
 
 
 def setup(bot):

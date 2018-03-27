@@ -4,6 +4,7 @@ import itertools
 from enum import Enum
 
 import discord
+import math
 from discord.ext import commands
 
 from utils.exceptions import CustomCheckFailure
@@ -41,7 +42,14 @@ class QueuePaginator(Paginator):
         super().__init__(items=self.items, **kwargs)
 
     @property
+    def pages_needed(self):
+        return math.ceil(len(self.items)/self.items_per_page) if self.items else 1
+
+    @property
     def embed(self):
+        if not self.items:
+            return discord.Embed(color=self.color, description="**There are no songs in the queue**")
+
         lower_bound = self.page*self.items_per_page
         upper_bound = lower_bound+self.items_per_page
         desc = f"**Up next:**\n`1.` {self.items[0]}\n\n"
@@ -65,10 +73,22 @@ def music_check(**kwargs):
     in_channel = kwargs.pop("in_channel", False)
     playing = kwargs.pop("playing", False)
     is_dj = kwargs.pop("is_dj", False)
+    is_donor = kwargs.pop("is_donor", "")
 
     async def predicate(ctx):
         if not ctx.guild:
             raise CustomCheckFailure(f"{WARNING} This command is guild only")
+
+        if is_donor:
+            bot_settings = await SettingsDB.get_instance().get_bot_settings()
+            if is_donor == "contributors" and ctx.guild.id not in bot_settings.contributors.values():
+                raise CustomCheckFailure(f"{WARNING} This command is for patrons who have donated for the "
+                                         f"**contributor** and above tier only. If you want to become a patron, "
+                                         f"then type .donate in chat")
+            if is_donor == "patrons" and ctx.guild.id not in bot_settings.patrons.values():
+                raise CustomCheckFailure(f"{WARNING} This command is for patrons who have donated for the "
+                                         f"**baller** and above tier only. If you want to become a patron, "
+                                         f"then type .donate in chat")
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         vc = ctx.guild.get_channel(settings.voiceId)
@@ -79,7 +99,7 @@ def music_check(**kwargs):
         player = link.player
 
         if in_channel:
-            if not ctx.author.voice and not ctx.author.voice.channel:
+            if not ctx.author.voice or not ctx.author.voice.channel:
                 raise CustomCheckFailure(f"{WARNING} You must be in a voice channel to use this command!")
             elif vc and ctx.author.voice.channel != vc:
                 raise CustomCheckFailure(f"{WARNING} You must be listening in `{vc.name}` to use this command!")

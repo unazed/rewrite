@@ -23,8 +23,6 @@ class GuildSettings(Settings):
 class BotSettings(Settings):
     def __init__(self, id, **kwargs):
         super().__init__(id)
-        self.contributors = kwargs.get("contributors")
-        self.ballers = kwargs.get("ballers")
         self.owners = kwargs.get("owners")
         self.prefix = kwargs.get("prefix")
         self.game = kwargs.get("game")
@@ -32,3 +30,6 @@ class BotSettings(Settings):
         self.geniusToken = kwargs.get("geniusToken")
         self.lavaPass = kwargs.get("lavaPass")
         self.lavaHost = kwargs.get("lavaHost")
+        self.contributors = kwargs.get("contributors")
+        self.ballers = kwargs.get("ballers")
+        self.patrons = {**self.ballers, **self.contributors}

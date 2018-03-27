@@ -19,11 +19,11 @@ class SettingsDB:
         return SettingsDB._instance
 
     async def get_bot_settings(self):
-        document = await self.bot_settings_col.find_one({"_id": "0"})
+        document = await self.bot_settings_col.find_one({"_id": 0})
         return BotSettings(document.get("_id"), **document)
 
     async def set_bot_settings(self, settings):
-        return await self.bot_settings_col.replace_one({"_id": "0"}, settings.__dict__)
+        return await self.bot_settings_col.replace_one({"_id": 0}, settings.__dict__)
 
     async def get_guild_settings(self, id):
         document = await self.guild_settings_col.find_one({"_id": id})
