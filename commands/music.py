@@ -53,8 +53,11 @@ class Music:
                 await mp.add_track(track, ctx.author)
             await ctx.send(f"{NOTES} **Added** {len(results)} entries to the queue")
         else:
-            await mp.add_track(results[0], ctx.author)
-            await ctx.send(f"{NOTES} **Added** `{results[0].title}` to the queue")
+            pos = await mp.add_track(results[0], ctx.author)
+            if pos == -1:
+                await ctx.send(f"{NOTES} **Added** `{results[0].title}` to be played now")
+                return
+            await ctx.send(f"{NOTES} **Added** `{results[0].title}` to position: `{pos+1}`")
 
     @commands.command(aliases=["np", "nowplaying"])
     @music_check(playing=True)
@@ -62,6 +65,20 @@ class Music:
         mp = self.mpm.get_music_player(ctx, False)
         embed = mp.embed_current()
         await ctx.send(embed=embed)
+
+    @commands.command(aliases=["prev"])
+    @music_check(in_channel=True)
+    async def previous(self, ctx):
+        mp = self.mpm.get_music_player(ctx, False)
+        if not mp or not mp.previous:
+            await ctx.send(f"{WARNING} There hasn't been played anything yet!")
+            return
+
+        pos = await mp.add_track(mp.previous.track, ctx.author)
+        if pos == -1:
+            await ctx.send(f"{NOTES} **Added previous track:** `{mp.previous.track.title}` to be played now")
+            return
+        await ctx.send(f"{NOTES} **Added previous track:** `{mp.previous.track.title}` to position: `{pos+1}`")
 
     @commands.command(aliases=["q", "songlist"])
     @music_check(playing=True)
@@ -120,8 +137,7 @@ class Music:
     async def remove(self, ctx, pos: int):
         pos -= 1
         mp = self.mpm.get_music_player(ctx, False)
-        track = mp.queue[pos]
-        mp.queue.remove(track)
+        track = mp.remove(pos)
         await ctx.send(f"{SUCCESS} The track: `{track.track.title}` has been removed")
 
     @commands.command(aliases=["jumpto", "jump"])
@@ -154,6 +170,14 @@ class Music:
             await ctx.send(f"{SUCCESS} The track: {moved} has been moved to be played next")
         else:
             await ctx.send(f"{SUCCESS} The track: {moved} has been moved to position {pos+1}")
+
+    @commands.command(aliases=["loop"])
+    @music_check(playing=True, is_dj=True)
+    async def repeat(self, ctx):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        settings.repeat = not settings.repeat
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The repeat state has been set to `{settings.repeat}`")
 
     @commands.command(aliases=["vol"])
     @music_check(playing=True, is_dj=True, is_donor="contributors")

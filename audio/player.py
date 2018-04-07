@@ -1,12 +1,60 @@
 from collections import deque
 from random import shuffle
 import discord
+import itertools
 
 from utils.DB import SettingsDB
 from utils.magma.core import TrackPauseEvent, TrackResumeEvent, TrackStartEvent, TrackEndEvent, \
     AbstractPlayerEventAdapter, TrackExceptionEvent, TrackStuckEvent, format_time
 from utils.music import UserData, Enqueued
 from utils.visual import NOTES, COLOR
+
+
+class MusicQueue:
+    def __init__(self, items=deque()):
+        self.items = items
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, item):
+        return self.items.__getitem__(item)
+
+    @property
+    def size(self):
+        return len(self.items)
+
+    @property
+    def empty(self):
+        return len(self.items) == 0
+
+    def index(self, item):
+        return self.items.index(item)
+
+    def pop_left(self):
+        return self.items.popleft()
+
+    def put(self, item):
+        self.items.append(item)
+        return self.index(item)
+
+    def remove(self, item):
+        return self.items.remove(item)
+
+    def shorten(self, start):
+        self.items = deque(itertools.islice(self.items, start, self.size))
+
+    def clear(self):
+        return self.items.clear()
+
+    def move(self, to_move, pos):
+        moved = self.items[to_move]
+        self.items.remove(moved)
+        self.items.insert(pos, moved)
+        return moved
+
+    def shuffle(self):
+        shuffle(self.items)
 
 
 class MusicPlayer(AbstractPlayerEventAdapter):
@@ -17,7 +65,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.bot = ctx.bot
         self.guild = ctx.guild
         self.skips = set()
-        self.queue = deque()
+        self.queue = MusicQueue()
         self.paused = False
         self.current = None
         self.previous = None
@@ -40,16 +88,16 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         return embed
 
     def shuffle(self):
-        shuffle(self.queue)
+        self.queue.shuffle()
 
     def clear(self):
         self.queue.clear()
 
+    def remove(self, to_remove):
+        return self.queue.remove(to_remove)
+
     def move(self, to_move, pos):
-        moved = self.queue[to_move]
-        self.queue.remove(moved)
-        self.queue.insert(pos, moved)
-        return moved
+       return self.queue.move(to_move, pos)
 
     async def add_track(self, audio_track, requester):
         return await self.add_enqueued(Enqueued(audio_track, requester))
@@ -60,7 +108,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
             self.current = enqueued
             await self.player.play(enqueued.track)
             return -1
-        self.queue.append(enqueued)
+        self.queue.put(enqueued)
         return self.queue.index(enqueued)
 
     async def stop(self):
@@ -76,7 +124,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def skip_to(self, pos):
         self.player.current.user_data = UserData.SKIPPED
-        self.queue = deque(list(self.queue)[pos:])
+        self.queue.shorten(pos)
         await self.player.stop()
 
     async def track_pause(self, event: TrackPauseEvent):
@@ -105,9 +153,9 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def track_end(self, event: TrackEndEvent):
         user_data = event.track.user_data
-        if user_data.may_start_next and len(self.queue) != 0:
+        if user_data.may_start_next and not self.queue.empty:
             self.previous = self.current
-            self.current = self.queue.popleft()
+            self.current = self.queue.pop_left()
             await self.player.play(self.current.track)
             return
         await self.stop()

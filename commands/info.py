@@ -9,8 +9,7 @@ from utils.visual import COLOR
 
 class Info:
     def __init__(self, bot):
-        self.bot = bot # flamekong was here xdddddddddddddd
-        self.process = psutil.Process()  # Later for RAM usage
+        self.bot = bot  # flamekong was here xdddddddddddddd
 
     @commands.command()
     async def ping(self, ctx):
@@ -18,7 +17,7 @@ class Info:
         await ctx.channel.trigger_typing()
         t2 = time.perf_counter()
         # Singles quotes to match my relationship status
-        fmt = '\U0001f3d3 **Pong!** `{}ms`'.format(str(round((t2 - t1) * 100)))
+        fmt = f"\U0001f3d3 **Pong!** `{str(round((t2 - t1) * 100))}ms`"
         # An embed for 7 letters, yes
         em = discord.Embed(description=fmt, color=COLOR)
         await ctx.send(embed=em)

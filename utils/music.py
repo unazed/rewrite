@@ -32,7 +32,7 @@ class Enqueued:
         self.finished = False
 
     def __str__(self):
-        return f"{self.track.title} (`{format_time(self.track.duration)}`)"
+        return f"`{self.track.title}` ({format_time(self.track.duration)})"
 
 
 class QueuePaginator(Paginator):
@@ -107,7 +107,7 @@ def music_check(**kwargs):
         if tc and ctx.channel != tc:
             raise CustomCheckFailure(f"{WARNING} You must be typing in `{tc.name}` to use this command!")
 
-        if playing and not player.event_adapter and not player.is_playing:
+        if playing and not (player.event_adapter and player.is_playing):
             raise CustomCheckFailure(f"{WARNING} The bot must be playing to use this command!")
 
         voice = ctx.guild.me.voice

@@ -9,7 +9,7 @@ class MusicPlayerManager:
         self.lavalink = Lavalink(bot)
 
     def get_music_player(self, ctx, select_if_absent=True):
-        if not select_if_absent and ctx.guild.id in self.music_players:
+        if not select_if_absent or ctx.guild.id in self.music_players:
             return self.music_players.get(ctx.guild.id)
 
         link = self.lavalink.get_link(ctx.guild)
