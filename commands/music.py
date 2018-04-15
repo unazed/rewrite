@@ -195,15 +195,18 @@ class Music:
 
     @commands.command()
     @music_check(playing=True, is_dj=True)
-    async def seek(self, ctx, duration: str):
+    async def seek(self, ctx, timestamp: str):
         mp = self.mpm.get_music_player(ctx, False)
-        current_pos = round(mp.player.position/1000)
+        current_pos = round(mp.player.position)
         try:
-            if ":" in duration:
-                splitted = duration.split(":")
-                pos = (int(splitted[0])*60+int(splitted[1]))*1000
+            if ":" in timestamp:
+                ts_split = [0, 0] + [int(t) for t in timestamp.split(':')]
+                hours = ts_split[-3]
+                mins = ts_split[-2]
+                secs = ts_split[-1]
+                pos = (secs + 60 * (mins + 60 * hours)) * 1000
             else:
-                pos = (current_pos + int(duration))*1000
+                pos = current_pos + int(timestamp)*1000
         except ValueError:
             await ctx.send(f"{WARNING} The specified duration must be a number!")
             return

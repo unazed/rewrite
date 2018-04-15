@@ -66,6 +66,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.guild = ctx.guild
         self.skips = set()
         self.queue = MusicQueue()
+        self.repeat_queue = deque()
         self.paused = False
         self.current = None
         self.previous = None
@@ -135,6 +136,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def track_start(self, event: TrackStartEvent):
         self.skips.clear()
+        self.repeat_queue.append(self.current)
         topic = f"{NOTES} **Now playing** {self.current}"
         settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
         text_id = settings.textId
@@ -153,11 +155,18 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def track_end(self, event: TrackEndEvent):
         user_data = event.track.user_data
-        if user_data.may_start_next and not self.queue.empty:
-            self.previous = self.current
-            self.current = self.queue.pop_left()
-            await self.player.play(self.current.track)
-            return
+        self.previous = self.current
+        if user_data.may_start_next:
+            if self.queue.empty:
+                settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
+                if settings.repeat:
+                    self.queue = MusicQueue(self.repeat_queue)
+                    self.repeat_queue = deque()
+
+            if not self.queue.empty:
+                self.current = self.queue.pop_left()
+                await self.player.play(self.current.track)
+                return
         await self.stop()
         settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
         text_id = settings.textId

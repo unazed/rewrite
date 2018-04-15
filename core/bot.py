@@ -17,7 +17,6 @@ class Bot(AutoShardedBot):
         self.logger = logging.getLogger("bot")
         self.start_time = datetime.now()
         self.bot_settings = bot_settings
-        self.prefix = bot_settings.prefix
         self.owners = bot_settings.owners
         self.mpm = None
         self.ready = False
@@ -41,6 +40,8 @@ class Bot(AutoShardedBot):
 
                 command_name = file_name[:-len(ext)]
                 self.load_extension(f"{commands_dir}.{command_name}")
+
+            # finally ready
             self.ready = True
 
     async def on_shard_ready(self, shard_id):

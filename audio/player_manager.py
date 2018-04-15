@@ -16,3 +16,6 @@ class MusicPlayerManager:
         mp = MusicPlayer(ctx, link)
         self.music_players[ctx.guild.id] = mp
         return mp
+
+    def find_all(self, predicate):
+        return dict(filter(predicate, self.music_players.items()))
