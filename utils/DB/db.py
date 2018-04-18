@@ -23,7 +23,7 @@ class SettingsDB:
         return BotSettings(document.get("_id"), **document)
 
     async def set_bot_settings(self, settings):
-        return await self.bot_settings_col.replace_one({"_id": 0}, settings.__dict__)
+        return await self.bot_settings_col.replace_one({"_id": 0}, settings.__dict__, True)
 
     async def get_guild_settings(self, id):
         document = await self.guild_settings_col.find_one({"_id": id})
@@ -32,4 +32,4 @@ class SettingsDB:
         return GuildSettings(id)
 
     async def set_guild_settings(self, settings):
-        return await self.guild_settings_col.replace_one({"_id": settings._id}, settings.__dict__)
+        return await self.guild_settings_col.replace_one({"_id": settings._id}, settings.__dict__, True)
