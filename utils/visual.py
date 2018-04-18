@@ -14,7 +14,7 @@ ARROW_LEFT = "\u25C0"
 STOP = "\u23F9"
 
 
-class Paginator:
+class Paginator(object):
     REACTIONS = (ARROW_RIGHT, ARROW_LEFT, STOP)
 
     def __init__(self, **kwargs):
