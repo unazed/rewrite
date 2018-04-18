@@ -11,7 +11,6 @@ from utils.visual import WARNING
 
 
 class Bot(AutoShardedBot):
-
     def __init__(self, bot_settings, **kwargs):
         super().__init__(command_prefix=bot_settings.prefix, **kwargs)
         self.logger = logging.getLogger("bot")
@@ -25,46 +24,42 @@ class Bot(AutoShardedBot):
 
     async def on_ready(self):
         self.logger.info("!! Logged in !!")
-        if not self.ready:
-            self.remove_command("help")
+        if self.ready:
+            return
+        self.remove_command("help")
 
-            self.mpm = MusicPlayerManager(self)
-            await self.mpm.lavalink.add_node("local", "ws://localhost:8080",
-                                             "http://localhost:2333", "youshallnotpass")
+        self.mpm = MusicPlayerManager(self)
+        await self.mpm.lavalink.add_node("local", "ws://localhost:8080",
+                                         "http://localhost:2333", "youshallnotpass")
 
-            commands_dir = "commands"
-            ext = ".py"
-            for file_name in os.listdir(commands_dir):
-                if not file_name.endswith(ext):
-                    continue
-
+        commands_dir = "commands"
+        ext = ".py"
+        for file_name in os.listdir(commands_dir):
+            if  file_name.endswith(ext):
                 command_name = file_name[:-len(ext)]
                 self.load_extension(f"{commands_dir}.{command_name}")
-
-            # finally ready
-            self.ready = True
+        self.ready = True
 
     async def on_shard_ready(self, shard_id):
         self.logger.info(f"Shard: {shard_id}/{self.shard_count} is ready")
 
     async def on_message(self, msg):
-        if msg.author.bot:
-            return
-        await self.process_commands(msg)
+        if not msg.author.bot:
+            await self.process_commands(msg)
 
     async def on_command_error(self, context, exception):
-        if exception.__class__ in (CommandNotFound, NotOwner):
+        exc_class = exception.__class__
+        if exc_class in (CommandNotFound, NotOwner):
             return
-        if isinstance(exception, CustomCheckFailure):
-            msg = await context.send(exception.msg)
-            await asyncio.sleep(5)
-            await msg.delete()
-        elif isinstance(exception, MissingRequiredArgument):
-            msg = await context.send(f"{WARNING} The required arguments are missing for this command!")
-            await asyncio.sleep(5)
-            await msg.delete()
-        elif isinstance(exception, NoPrivateMessage):
-            msg = await context.send(f"{WARNING} This command cannot be used in PM's!")
+        
+        exc_table = {
+            CustomCheckFailure: exception.msg,
+            MissingRequiredArgument: f"{WARNING} The required arguments are missing for this command!",
+            NoPrivateMesssage: f"{WARNING} This command cannot be used in PM's!"
+        }
+        
+        if isinstance(exception, (*exc_table,)):  # converts dictionary keys to tuple
+            msg = await context.send(exc_table[exc_class])
             await asyncio.sleep(5)
             await msg.delete()
         else:
