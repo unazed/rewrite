@@ -18,15 +18,15 @@ class MusicQueue:
         return len(self.items)
 
     def __getitem__(self, item):
-        return self.items.__getitem__(item)
+        return self.items[item]
 
     @property
     def size(self):
-        return len(self.items)
+        return self.__len__()
 
     @property
     def empty(self):
-        return len(self.items) == 0
+        return not self.items
 
     def index(self, item):
         return self.items.index(item)
