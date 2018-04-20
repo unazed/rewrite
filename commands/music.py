@@ -32,7 +32,7 @@ class Music:
 
         try:
             await mp.link.connect(ctx.author.voice.channel)
-        except discord.ClientException:
+        except commands.BotMissingPermissions:
             await ctx.send(f"{ERROR} I am unable to connect to **{ctx.author.voice.channel.name}**, "
                            f"check if the permissions are correct!")
             return
@@ -46,7 +46,7 @@ class Music:
             await ctx.send(f"{WARNING} No results found!")
             return
 
-        if query.startswith("http"):
+        if query.startswith("http") and len(results) > 1:
             if should_shuffle:
                 random.shuffle(results)
             for track in results:

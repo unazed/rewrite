@@ -1,3 +1,5 @@
+import re
+
 import discord
 from discord.ext import commands
 
@@ -19,6 +21,7 @@ def perm_check():
 class Settings:
     def __init__(self, bot):
         self.bot = bot
+        self.autoplay_pattern = re.compile("^(https?://)?((www\.)?youtube\.com|youtu\.?be)/.+$")
 
     @commands.group(pass_context=True, invoke_without_command=True, case_insensitive=True)
     @commands.guild_only()
@@ -124,6 +127,9 @@ class Settings:
             await ctx.send(f"{SUCCESS} The autoplay playlist has been set to the default playlist, autoplay will play "
                            f"once the queue ends")
         else:
+            if not self.autoplay_pattern.match(link):
+                await ctx.send(f"{WARNING} The autoplay link must be linking to a YouTube playlist!")
+                return
             settings.autoplay = link
             await SettingsDB.get_instance().set_guild_settings(settings)
             await ctx.send(f"{SUCCESS} The autoplay playlist has been set to `{link}`, autoplay will play "

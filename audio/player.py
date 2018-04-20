@@ -68,6 +68,8 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.queue = MusicQueue()
         self.repeat_queue = deque()
         self.paused = False
+        self.autoplaying = False
+        self.autoplayed = False
         self.current = None
         self.previous = None
 
@@ -98,7 +100,16 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         return self.queue.remove(to_remove)
 
     def move(self, to_move, pos):
-       return self.queue.move(to_move, pos)
+        return self.queue.move(to_move, pos)
+
+    async def music_chan(self):
+        settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
+        text_id = settings.textId
+        return self.guild.get_channel(text_id)
+
+    async def tms(self):
+        settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
+        return settings.tms
 
     async def add_track(self, audio_track, requester):
         return await self.add_enqueued(Enqueued(audio_track, requester))
@@ -109,11 +120,19 @@ class MusicPlayer(AbstractPlayerEventAdapter):
             self.current = enqueued
             await self.player.play(enqueued.track)
             return -1
+        if self.autoplaying:
+            self.current.track.user_data = UserData.REPLACED_AUTOPLAY
+            self.autoplaying = False
+            self.queue.clear()
+            self.queue.put(enqueued)
+            await self.player.stop()
+            return -1
         self.queue.put(enqueued)
         return self.queue.index(enqueued)
 
     async def stop(self):
         self.current = None
+        self.paused = False
         if self.player.current:
             self.player.current.user_data = UserData.STOPPED
             await self.player.stop()
@@ -128,6 +147,19 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.queue.shorten(pos)
         await self.player.stop()
 
+    async def load_autoplay(self, identifier):
+        if identifier == "DEFAULT":
+            bot_settings = self.bot.bot_settings
+            playlist = bot_settings.autoplayPlaylist
+        else:
+            playlist = identifier
+
+        tracks = await self.link.get_tracks(playlist, False)
+        shuffle(tracks)
+        for track in tracks:
+            await self.add_track(track, self.guild.me)
+        self.autoplaying = True
+
     async def track_pause(self, event: TrackPauseEvent):
         self.paused = True
 
@@ -138,20 +170,15 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.skips.clear()
         self.repeat_queue.append(self.current)
         topic = f"{NOTES} **Now playing** {self.current}"
-        settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
-        text_id = settings.textId
-        music_channel = self.guild.get_channel(text_id)
+        music_channel = await self.music_chan()
+        tms = await self.tms()
         if music_channel:
-            await self.ctx.send(topic)
+            if tms:
+                await music_channel.send(topic)
             try:
                 await music_channel.edit(topic=topic)
             except:
                 pass
-            if settings.tms:
-                await music_channel.send(topic)
-        else:
-            if settings.tms:
-                await self.ctx.send(topic)
 
     async def track_end(self, event: TrackEndEvent):
         user_data = event.track.user_data
@@ -159,15 +186,24 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         if user_data.may_start_next:
             if self.queue.empty:
                 settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
+
                 if settings.repeat:
                     self.queue = MusicQueue(self.repeat_queue)
                     self.repeat_queue = deque()
+                elif settings.autoplay != "NONE" and not self.autoplaying:
+                    await self.load_autoplay(settings.autoplay)
+                    music_channel = await self.music_chan()
+                    tms = await self.tms()
+                    if music_channel and tms:
+                        await self.ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
 
             if not self.queue.empty:
                 self.current = self.queue.pop_left()
                 await self.player.play(self.current.track)
                 return
-        await self.stop()
+
+        if self.guild.id not in self.bot.bot_settings.patrons.values():
+            await self.stop()
         settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
         text_id = settings.textId
         music_channel = self.guild.get_channel(text_id)

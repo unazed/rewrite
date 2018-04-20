@@ -70,12 +70,12 @@ class Bot(commands.AutoShardedBot):
             return
 
         exc_table = {
-            CustomCheckFailure: exception.msg,
             commands.MissingRequiredArgument: f"{WARNING} The required arguments are missing for this command!",
-            commands.NoPrivateMessage: f"{WARNING} This command cannot be used in PM's!"
+            commands.NoPrivateMessage: f"{WARNING} This command cannot be used in PM's!",
+            CustomCheckFailure: getattr(exception, "msg", None) or "None"
         }
 
-        if isinstance(exception, (*exc_table,)):  # converts dictionary keys to tuple
+        if exc_class in exc_table.keys():
             msg = await context.send(exc_table[exc_class])
             await asyncio.sleep(5)
             await msg.delete()

@@ -26,6 +26,7 @@ class BotSettings(Settings):
         self.owners = kwargs.get("owners")
         self.prefix = kwargs.get("prefix")
         self.game = kwargs.get("game")
+        self.autoplayPlaylist = kwargs.get("autoplayPlaylist")
         self.token = kwargs.get("token")
         self.geniusToken = kwargs.get("geniusToken")
         self.lavaPass = kwargs.get("lavaPass")
