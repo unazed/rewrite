@@ -6,7 +6,7 @@ from discord.ext import commands
 from utils.DB import SettingsDB
 from utils.magma.core import format_time
 from utils.music import music_check, QueuePaginator
-from utils.visual import ERROR
+from utils.visual import ERROR, COLOR
 from utils.visual import NOTES
 from utils.visual import SUCCESS
 from utils.visual import WARNING
@@ -171,28 +171,6 @@ class Music:
         else:
             await ctx.send(f"{SUCCESS} The track: {moved} has been moved to position {pos+1}")
 
-    @commands.command(aliases=["loop"])
-    @music_check(playing=True, is_dj=True)
-    async def repeat(self, ctx):
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        settings.repeat = not settings.repeat
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send(f"{SUCCESS} The repeat state has been set to `{settings.repeat}`")
-
-    @commands.command(aliases=["vol"])
-    @music_check(playing=True, is_dj=True, is_donor="contributors")
-    async def volume(self, ctx, volume: int):
-        if not 0 <= volume <= 150:
-            await ctx.send(f"{WARNING} The specified volume must be from `0-150`!")
-            return
-
-        mp = self.mpm.get_music_player(ctx, False)
-        await mp.player.set_volume(volume)
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        settings.volume = volume
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send(f"{SUCCESS} The player volume has been set to `{volume}`")
-
     @commands.command()
     @music_check(playing=True, is_dj=True)
     async def seek(self, ctx, timestamp: str):
@@ -235,6 +213,64 @@ class Music:
 
         await mp.player.set_paused(False)
         await ctx.send(f"{SUCCESS} The player has been resumed")
+
+    @commands.command(aliases=["loop"])
+    @music_check(playing=True, is_dj=True)
+    async def repeat(self, ctx):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        settings.repeat = not settings.repeat
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The repeat state has been set to `{settings.repeat}`")
+
+    @commands.command(aliases=["vol"])
+    @music_check(playing=True, is_dj=True, is_donor="contributors")
+    async def volume(self, ctx, volume: int):
+        if not 0 <= volume <= 150:
+            await ctx.send(f"{WARNING} The specified volume must be from `0-150`!")
+            return
+
+        mp = self.mpm.get_music_player(ctx, False)
+        await mp.player.set_volume(volume)
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        settings.volume = volume
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The player volume has been set to `{volume}`")
+
+    @commands.group(pass_context=True, invoke_without_command=True, case_insensitive=True)
+    @music_check(is_dj=True, is_donor="patrons")
+    async def aliases(self, ctx):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        aliases = settings.aliases if settings.aliases else {}
+        if not aliases:
+            await ctx.send(f"{WARNING} No aliases having been set! Add an alias with: `.aliases add [alias] [link]`")
+            return
+
+        embed = discord.Embed(color=COLOR)
+        embed.set_footer(text="The name of the aliases are displayed above their links/values")
+        for i in aliases:
+            embed.add_field(name=i, value=aliases[i], inline=False)
+        await ctx.send(content=f"{NOTES} Music aliases for **{ctx.guild.name}**", embed=embed)
+
+    @aliases.command()
+    @music_check(is_dj=True, is_donor="patrons")
+    async def add(self, ctx, alias, *, link):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        if not settings.aliases:
+            settings.aliases = {}
+        settings.aliases[alias] = link
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The alias `{alias}` is now pointing to `{link}`. Use `.pl {alias}` to play it")
+
+    @aliases.command(aliases=["delete"])
+    @music_check(is_dj=True, is_donor="patrons")
+    async def remove(self, ctx, alias):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        if alias not in settings.aliases:
+            await ctx.send(f"{WARNING} The alias `{alias}` is not found!")
+            return
+        del settings.aliases[alias]
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The alias `{alias}` has been removed")
 
 
 def setup(bot):

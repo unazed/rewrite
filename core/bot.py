@@ -8,7 +8,7 @@ from discord.ext import commands
 from audio.player_manager import MusicPlayerManager
 from utils.DB import SettingsDB
 from utils.exceptions import CustomCheckFailure
-from utils.visual import ERROR
+from utils.visual import WARNING
 
 
 class Bot(commands.AutoShardedBot):
@@ -72,7 +72,7 @@ class Bot(commands.AutoShardedBot):
         exc_table = {
             CustomCheckFailure: exception.msg,
             commands.MissingRequiredArgument: f"{WARNING} The required arguments are missing for this command!",
-            commands.NoPrivateMesssage: f"{WARNING} This command cannot be used in PM's!"
+            commands.NoPrivateMessage: f"{WARNING} This command cannot be used in PM's!"
         }
 
         if isinstance(exception, (*exc_table,)):  # converts dictionary keys to tuple
@@ -80,5 +80,4 @@ class Bot(commands.AutoShardedBot):
             await asyncio.sleep(5)
             await msg.delete()
         else:
-            await super().on_command_error(ctx, exception)
-
+            await super().on_command_error(context, exception)
