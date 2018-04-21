@@ -27,8 +27,13 @@ class Music:
         if splitted[0] == "shuffle":
             should_shuffle = True
             query = "".join(splitted[1:])
+
         if query == "init0":
             query = "https://www.youtube.com/playlist?list=PLzME6COik-H9hSsEuvAf26uQAN228ESck"
+        elif ctx.guild.id in self.bot.bot_settings.patrons.values():
+            settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+            if settings.aliases and query in settings.aliases:
+                query = settings.aliases[query]
 
         try:
             await mp.link.connect(ctx.author.voice.channel)
@@ -117,10 +122,9 @@ class Music:
     @music_check(in_channel=True, is_dj=True)
     async def stop(self, ctx):
         try:
-            link = self.mpm.lavalink.get_link(ctx.guild)
-            await link.disconnect()
             mp = self.mpm.get_music_player(ctx, False)
             await mp.stop()
+            await mp.link.disconnect()
         except:
             pass
         await ctx.send(f"{SUCCESS} The player has been stopped and the bot has disconnected")

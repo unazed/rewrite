@@ -21,10 +21,6 @@ class MusicQueue:
         return self.items.__getitem__(item)
 
     @property
-    def size(self):
-        return len(self.items)
-
-    @property
     def empty(self):
         return len(self.items) == 0
 
@@ -42,7 +38,7 @@ class MusicQueue:
         return self.items.remove(item)
 
     def shorten(self, start):
-        self.items = deque(itertools.islice(self.items, start, self.size))
+        self.items = deque(itertools.islice(self.items, start, self.__len__()))
 
     def clear(self):
         return self.items.clear()
@@ -69,7 +65,6 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.repeat_queue = deque()
         self.paused = False
         self.autoplaying = False
-        self.autoplayed = False
         self.current = None
         self.previous = None
 
@@ -143,7 +138,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         await self.player.stop()
 
     async def skip_to(self, pos):
-        self.player.current.user_data = UserData.SKIPPED
+        self.player.current.user_data = UserData.SKIPPED_TO
         self.queue.shorten(pos)
         await self.player.stop()
 
@@ -182,28 +177,32 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def track_end(self, event: TrackEndEvent):
         user_data = event.track.user_data
+        if not user_data.may_start_next:
+            return
+
         self.previous = self.current
-        if user_data.may_start_next:
-            if self.queue.empty:
-                settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
+        if self.queue.empty:
+            settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
 
-                if settings.repeat:
-                    self.queue = MusicQueue(self.repeat_queue)
-                    self.repeat_queue = deque()
-                elif settings.autoplay != "NONE" and not self.autoplaying:
-                    await self.load_autoplay(settings.autoplay)
-                    music_channel = await self.music_chan()
-                    tms = await self.tms()
-                    if music_channel and tms:
-                        await self.ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
+            if settings.repeat:
+                self.queue = MusicQueue(self.repeat_queue)
+                self.repeat_queue = deque()
+            elif settings.autoplay != "NONE" and not self.autoplaying:
+                await self.load_autoplay(settings.autoplay)
+                music_channel = await self.music_chan()
+                tms = await self.tms()
+                if music_channel and tms:
+                    await self.ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
 
-            if not self.queue.empty:
-                self.current = self.queue.pop_left()
-                await self.player.play(self.current.track)
-                return
+        if not self.queue.empty:
+            self.current = self.queue.pop_left()
+            await self.player.play(self.current.track)
+            return
 
+        await self.stop()
         if self.guild.id not in self.bot.bot_settings.patrons.values():
-            await self.stop()
+            await self.link.disconnect()
+
         settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
         text_id = settings.textId
         music_channel = self.guild.get_channel(text_id)
