@@ -23,3 +23,4 @@ if __name__ == "__main__":
     db = SettingsDB.get_instance()
     bot_settings = loop.run_until_complete(db.get_bot_settings())
     run(bot_settings, loop=loop)
+
