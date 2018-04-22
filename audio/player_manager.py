@@ -42,7 +42,7 @@ class MusicPlayerManager:
 
     async def voice_left(self, channel):
         users = list(filter(lambda m: not m.bot, channel.members))
-        if len(users) > 1:
+        if len(users) > 0:
             return
 
         task = self.bot.loop.create_task(self.timeout_task(channel))
@@ -64,9 +64,9 @@ class MusicPlayerManager:
         await mp.player.set_paused(True)
 
         if channel.guild.id not in self.bot.bot_settings.patrons.values():
-            await asyncio.sleep(180)
+            await asyncio.sleep(180)  # maybe should use a variable but who cares u know
             users = list(filter(lambda m: not m.bot, channel.members))
-            if len(users) > 1:
+            if len(users) > 0:
                 return
 
             await mp.player.set_paused(False)

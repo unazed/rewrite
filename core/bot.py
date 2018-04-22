@@ -8,6 +8,7 @@ from discord.ext import commands
 from audio.player_manager import MusicPlayerManager
 from utils.DB import SettingsDB
 from utils.exceptions import CustomCheckFailure
+from utils.magma.core import NodeException
 from utils.visual import WARNING
 
 
@@ -16,6 +17,8 @@ class Bot(commands.AutoShardedBot):
     @staticmethod
     def prefix_from(bot, msg):
         # must be an instance of this bot pls dont use anything else
+        if not msg.guild:
+            return bot.bot_settings.prefix
         return bot.prefix_map.get(msg.guild.id, bot.bot_settings.prefix)
 
     def __init__(self, bot_settings, **kwargs):
@@ -27,18 +30,21 @@ class Bot(commands.AutoShardedBot):
         self.mpm = None
         self.ready = False
 
-        logging.basicConfig(format="%(levelname)s -- %(name)s.%(funcName)s : %(message)s", level=logging.INFO)
-
     async def on_ready(self):
         if self.ready:
             return
 
+        logging.getLogger("discord").setLevel(logging.WARNING)
         self.logger.info("!! Logged in !!")
         self.remove_command("help")
 
         self.mpm = MusicPlayerManager(self)
-        await self.mpm.lavalink.add_node("local", "ws://localhost:8080",
-                                         "http://localhost:2333", "youshallnotpass")
+
+        for (node, conf) in self.bot_settings.lavaNodes.items():
+            try:
+                await self.mpm.lavalink.add_node(node, conf["uri"], conf["restUri"], conf["password"])
+            except NodeException as e:
+                self.logger.error(f"{node} - {e.args[0]}")
 
         prefix_servers = SettingsDB.get_instance().guild_settings_col.find({
             "$and": [{"prefix": {"$exists": True}},

@@ -5,7 +5,8 @@ from discord.ext import commands
 
 from utils.DB import SettingsDB
 from utils.exceptions import CustomCheckFailure
-from utils.visual import COLOR, WARNING
+from utils.music import music_check
+from utils.visual import COLOR, WARNING, NOTES
 from utils.visual import SUCCESS
 
 
@@ -167,6 +168,42 @@ class Settings:
             self.bot.prefix_map[ctx.guild.id] = prefix
             await ctx.send(f"{SUCCESS} The prefix has been changed to: `{prefix}`\ncommands should now be invoked as: "
                            f"`{prefix}play, {prefix}stop, {prefix}resume`")
+
+    @commands.group(pass_context=True, invoke_without_command=True, case_insensitive=True)
+    @music_check(is_dj=True, is_donor="patrons")
+    async def aliases(self, ctx):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        aliases = settings.aliases if settings.aliases else {}
+        if not aliases:
+            await ctx.send(f"{WARNING} No aliases having been set! Add an alias with: `.aliases add [alias] [link]`")
+            return
+
+        embed = discord.Embed(color=COLOR)
+        embed.set_footer(text="The name of the aliases are displayed above their links/values")
+        for i in aliases:
+            embed.add_field(name=i, value=aliases[i], inline=False)
+        await ctx.send(content=f"{NOTES} Music aliases for **{ctx.guild.name}**", embed=embed)
+
+    @aliases.command()
+    @music_check(is_dj=True, is_donor="patrons")
+    async def add(self, ctx, alias, *, link):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        if not settings.aliases:
+            settings.aliases = {}
+        settings.aliases[alias] = link
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The alias `{alias}` is now pointing to `{link}`. Use `.pl {alias}` to play it")
+
+    @aliases.command(aliases=["delete"])
+    @music_check(is_dj=True, is_donor="patrons")
+    async def remove(self, ctx, alias):
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        if alias not in settings.aliases:
+            await ctx.send(f"{WARNING} The alias `{alias}` is not found!")
+            return
+        del settings.aliases[alias]
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send(f"{SUCCESS} The alias `{alias}` has been removed")
 
 
 def setup(bot):

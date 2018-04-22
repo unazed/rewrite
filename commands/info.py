@@ -1,11 +1,11 @@
-import discord
 import time
-import psutil  # System info
 from datetime import datetime
+
+import discord
 from discord.ext import commands
 
-from utils.DB import SettingsDB
-from utils.visual import COLOR, WARNING
+from utils.misc import get_lyrics, split_str
+from utils.visual import COLOR, WARNING, Paginator
 
 
 class Info:
@@ -63,6 +63,22 @@ class Info:
                           colour=COLOR)
         e.set_thumbnail(url=self.bot.user.avatar_url)
         await ctx.send(embed=e)
+
+    @commands.command()
+    async def lyrics(self, ctx, *, song):
+        #doesnt work
+        lyrics = await get_lyrics(song, self.bot.bot_settings.geniusToken)
+        error = lyrics.get("error")
+        if error:
+            await ctx.send(f"{WARNING} {error}!")
+            return
+
+        title = lyrics["title"]
+        splitted = split_str(lyrics["lyrics"])
+
+        lyrics_paginator = Paginator(ctx=ctx, items=splitted, items_per_page=1)
+        await lyrics_paginator.send_to_channel()
+
 
 def setup(bot):
     bot.add_cog(Info(bot))
