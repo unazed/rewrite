@@ -64,6 +64,5 @@ class Info:
         e.set_thumbnail(url=self.bot.user.avatar_url)
         await ctx.send(embed=e)
 
-
 def setup(bot):
     bot.add_cog(Info(bot))

@@ -29,7 +29,6 @@ class Enqueued:
     def __init__(self, track, requester):
         self.track = track
         self.requester = requester
-        self.finished = False
 
     def __str__(self):
         return f"`{self.track.title}` ({format_time(self.track.duration)})"

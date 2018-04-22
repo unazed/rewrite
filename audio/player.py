@@ -15,7 +15,7 @@ class MusicQueue:
         self.items = items
 
     def __len__(self):
-        return len(self.items)
+        return self.items.__len__()
 
     def __getitem__(self, item):
         return self.items.__getitem__(item)
@@ -33,6 +33,19 @@ class MusicQueue:
     def put(self, item):
         self.items.append(item)
         return self.index(item)
+
+    def fair_put(self, item):
+        # look at this one liner
+        position = len(set(map(lambda i: i.requester, self.items)))
+        last_index = 0
+        for index in range(self.__len__()-1, 0, -1):
+            if self.items[index].requester == item.requester:
+                last_index = index
+                break
+
+        position += last_index
+        self.items.insert(position, item)
+        return position
 
     def remove(self, item):
         return self.items.remove(item)
@@ -122,8 +135,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
             self.queue.put(enqueued)
             await self.player.stop()
             return -1
-        self.queue.put(enqueued)
-        return self.queue.index(enqueued)
+        return self.queue.fair_put(enqueued)
 
     async def stop(self):
         self.current = None
