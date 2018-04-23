@@ -1,5 +1,8 @@
 import aiohttp
 import bs4 as bs4
+import discord
+
+from .visual import Paginator
 
 
 def split_str(string, split_at=2000):
@@ -23,13 +26,12 @@ def get_syntax_error(e):
 
 
 async def get_lyrics(query, token):
-    # Shit doesnt work
-    url = "http://api.genius.com/search"
-    params = {"q": query, "page": 1}
+    url = "https://api.genius.com/search"
+    params = {"q": query}
     headers = {"Authorization": f"Bearer {token}"}
 
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url, params=params, headers=headers) as response:
+        async with session.get(url, params=params) as response:
             data = await response.json()
             results = data["response"]["hits"]
 
@@ -38,13 +40,12 @@ async def get_lyrics(query, token):
 
         result = results[0]["result"]
         response = await session.get(result["url"])
-        bs = bs4.BeautifulSoup(await response.read(), "html.parser")
+        bs = bs4.BeautifulSoup(await response.text(), "html.parser")
 
-    # Remove script tags from the lyrics
     for script_tag in bs.find_all("script"):
         script_tag.extract()
 
-    lyrics = bs.find("lyrics").get_text()
+    lyrics = bs.find("div", class_="lyrics").get_text()
 
     return {
         "title": result["title"],
@@ -55,4 +56,26 @@ async def get_lyrics(query, token):
         "primary_artist": result["primary_artist"],
         "lyrics": lyrics
     }
+
+
+class LyricsPaginator(Paginator):
+    def __init__(self, ctx, lyrics_data):
+        super().__init__(ctx=ctx, items=split_str(lyrics_data["lyrics"]), items_per_page=1)
+        self.lyrics_data = lyrics_data
+
+    @property
+    def embed(self):
+        lower_bound = self.page*self.items_per_page
+        upper_bound = lower_bound+self.items_per_page
+        to_display = self.items[lower_bound:upper_bound]
+        desc = ""
+        for content in to_display:
+            desc += f"{content}"
+        embed = discord.Embed(color=self.color,
+                              description=desc, )
+        embed.set_author(name=f"{self.lyrics_data['primary_artist']['name']} - {self.lyrics_data['title']}",
+                         icon_url=self.lyrics_data["header_image_url"],
+                         url=self.lyrics_data["url"])
+        embed.set_footer(text=f"Page: {self.page+1}/{self.pages_needed}")
+        return embed
 

@@ -4,7 +4,7 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-from utils.misc import get_lyrics, split_str
+from utils.misc import get_lyrics, split_str, LyricsPaginator
 from utils.visual import COLOR, WARNING, Paginator
 
 
@@ -65,18 +65,44 @@ class Info:
         await ctx.send(embed=e)
 
     @commands.command()
+    async def donate(self, ctx):
+        e = discord.Embed(description="Hime has grown incredibly since it first started. In order to keep the music "
+                                      "player running with no lag and interruptions, alot of processing power is "
+                                      "required of the server, which is very costly. So if you like the bot, "
+                                      "then please donate to show your appreciation <3\n"
+                                      "[Donate here](https://www.patreon.com/himebot)",
+                          colour=COLOR)
+        e.set_thumbnail(url=self.bot.user.avatar_url)
+        e.set_author(name="Why should i donate?")
+        await ctx.send(embed=e)
+
+    @commands.command()
+    async def partners(self, ctx):
+        e = discord.Embed(colour=COLOR)
+        e.set_author(name="Our partners", icon_url=self.bot.user.avatar_url)
+
+        e.add_field(name="EMIYA - Unlimited Lewd Works Server",
+                    value="A place where we discuss anime related stuff, vidya, events, lewds and karaoke. "
+                          "[Discord server](https://discord.gg/2Jd5Tu4) | "
+                          "[Facebook page](https://www.facebook.com/xEmiyaShirou)")
+        e.add_field(name="Rap Town - Your #1 source for the best rap music!",
+                    value="For the best rap music on YouTube check out Rap Town! "
+                          "[YouTube channel](https://www.youtube.com/c/raptown) | "
+                          "[Music Discord server](https://discord.gg/thetown)")
+        e.add_field(name="Scorchy - Himebot's artist!",
+                    value="Scorchy is the artist for Hime's avatar, "
+                          "you could check out some of his work on his [Twitter](https://twitter.com/AyyScorchy)")
+        await ctx.send(embed=e)
+
+    @commands.command()
     async def lyrics(self, ctx, *, song):
-        #doesnt work
-        lyrics = await get_lyrics(song, self.bot.bot_settings.geniusToken)
-        error = lyrics.get("error")
+        lyrics_data = await get_lyrics(song, self.bot.bot_settings.geniusToken)
+        error = lyrics_data.get("error")
         if error:
             await ctx.send(f"{WARNING} {error}!")
             return
 
-        title = lyrics["title"]
-        splitted = split_str(lyrics["lyrics"])
-
-        lyrics_paginator = Paginator(ctx=ctx, items=splitted, items_per_page=1)
+        lyrics_paginator = LyricsPaginator(ctx, lyrics_data)
         await lyrics_paginator.send_to_channel()
 
 
