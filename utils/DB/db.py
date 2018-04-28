@@ -8,7 +8,7 @@ class SettingsDB:
 
     def __init__(self):
         self.client = motor.motor_asyncio.AsyncIOMotorClient("localhost", 27017)
-        self.db = self.client.local
+        self.db = self.client.test  # change this after testing
         self.guild_settings_col = self.db.settings
         self.bot_settings_col = self.db.bot_settings
 

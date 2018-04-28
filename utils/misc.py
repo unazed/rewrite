@@ -27,7 +27,7 @@ def get_syntax_error(e):
 
 async def get_lyrics(query, token):
     url = "https://api.genius.com/search"
-    params = {"q": query}
+    params = {"q": query, "page": 1}
     headers = {"Authorization": f"Bearer {token}"}
 
     async with aiohttp.ClientSession(headers=headers) as session:

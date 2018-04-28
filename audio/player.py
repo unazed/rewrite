@@ -161,7 +161,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         else:
             playlist = identifier
 
-        tracks = await self.link.get_tracks(playlist, False)
+        tracks = await self.link.get_tracks(playlist)
         shuffle(tracks)
         for track in tracks:
             await self.add_track(track, self.guild.me)

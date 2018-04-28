@@ -70,7 +70,7 @@ class Bot(commands.AutoShardedBot):
         if not msg.author.bot:
             await self.process_commands(msg)
 
-    async def on_command_error(self, context, exception):
+    async def on_command_error(self, ctx, exception):
         exc_class = exception.__class__
         if exc_class in (commands.CommandNotFound, commands.NotOwner):
             return
@@ -82,8 +82,8 @@ class Bot(commands.AutoShardedBot):
         }
 
         if exc_class in exc_table.keys():
-            msg = await context.send(exc_table[exc_class])
+            msg = await ctx.send(exc_table[exc_class])
             await asyncio.sleep(5)
             await msg.delete()
         else:
-            await super().on_command_error(context, exception)
+            await super().on_command_error(ctx, exception)

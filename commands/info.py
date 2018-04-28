@@ -4,8 +4,13 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-from utils.misc import get_lyrics, split_str, LyricsPaginator
-from utils.visual import COLOR, WARNING, Paginator
+from utils.DB import SettingsDB
+from utils.misc import get_lyrics, LyricsPaginator
+from utils.visual import COLOR, WARNING, SUCCESS
+
+HIME_SERVER_ID = 230772456380432398
+BALLER_ROLE_ID = 298728057898795010
+CONTRIBUTOR_ROLE_ID = 298728388292509707
 
 
 class Info:
@@ -104,6 +109,33 @@ class Info:
 
         lyrics_paginator = LyricsPaginator(ctx, lyrics_data)
         await lyrics_paginator.send_to_channel()
+
+    @commands.command()
+    @commands.guild_only()
+    async def redeem(self, ctx, server_id: int=None):
+        if ctx.guild.id == HIME_SERVER_ID:
+            roles = list(map(lambda role: role.id, ctx.author.roles))
+            bot_settings = self.bot.bot_settings
+
+            if not server_id:
+                await ctx.send(f"{WARNING} Please include your server ID! Use this command on your server to find out")
+                return
+
+            if CONTRIBUTOR_ROLE_ID in roles:
+                bot_settings.contributors[str(ctx.author.id)] = server_id
+                await ctx.send(f"{SUCCESS} Your guild with the ID of: **{server_id}** "
+                               f"now has access to Contributor commands!")
+            elif BALLER_ROLE_ID in roles:
+                bot_settings.ballers[str(ctx.author.id)] = server_id
+                await ctx.send(f"{SUCCESS} Your guild with the ID of: **{server_id}** "
+                               f"now has access to Baller commands!")
+            else:
+                await ctx.send(f"{WARNING} This command is for patrons who have donate $5 or above only!")
+                return
+            await SettingsDB.get_instance().set_bot_settings(bot_settings)
+        else:
+            await ctx.send(f"{WARNING} The server ID on this server is: **{ctx.guild.id}**, type `.redeem "
+                           f"{ctx.guild.id}` on **Hime's server** to obtain your rewards")
 
 
 def setup(bot):

@@ -1,4 +1,5 @@
 import random
+from asyncio import futures
 
 import discord
 from discord.ext import commands
@@ -36,17 +37,19 @@ class Music:
             if settings.aliases and query in settings.aliases:
                 query = settings.aliases[query]
 
-        try:
-            await mp.link.connect(ctx.author.voice.channel)
-        except commands.BotMissingPermissions:
-            await ctx.send(f"{ERROR} I am unable to connect to **{ctx.author.voice.channel.name}**, "
-                           f"check if the permissions are correct!")
-            return
+        voice = ctx.guild.me.voice
+        if not voice or not voice.channel:
+            try:
+                await mp.link.connect(ctx.author.voice.channel)
+            except commands.BotMissingPermissions:
+                await ctx.send(f"{ERROR} I am unable to connect to **{ctx.author.voice.channel.name}**, "
+                               f"check if the permissions are correct!")
+                return
 
         if query.startswith("http"):
-            results = await mp.link.get_tracks(query, False)
-        else:
             results = await mp.link.get_tracks(query)
+        else:
+            results = await mp.link.get_tracks_yt(query)
 
         if not results:
             await ctx.send(f"{WARNING} No results found!")
@@ -64,6 +67,59 @@ class Music:
                 await ctx.send(f"{NOTES} **Added** `{results[0].title}` to be played now")
                 return
             await ctx.send(f"{NOTES} **Added** `{results[0].title}` to position: `{pos+1}`")
+
+    @commands.command(aliases=["scsearch"])
+    @music_check(in_channel=True)
+    async def search(self, ctx, *, query):
+        mp = self.mpm.get_music_player(ctx)
+        sc = ctx.invoked_with == "scsearch"
+        if sc:
+            results = await mp.link.get_tracks_sc(query)
+        else:
+            results = await mp.link.get_tracks_yt(query)
+
+        if not results:
+            await ctx.send(f"{WARNING} No results found!")
+            return
+
+        desc = ""
+        for i in range(5):
+            desc += f"{i+1}. [{results[i].title}]({results[i].uri})\n"
+
+        e = discord.Embed(colour=COLOR, description=desc)
+        e.set_footer(text=f"Results fetched from {'SoundCloud' if sc else 'YouTube'}", icon_url=ctx.author.avatar_url)
+        await ctx.send(content=f"{NOTES} Type the number of the entry you wish to play", embed=e)
+
+        try:
+            msg = await self.bot.wait_for("message", check=lambda msg: msg.author.id == ctx.author.id, timeout=30.0)
+            index = int(msg.content)
+        except ValueError:
+            await ctx.send(f"{WARNING} Please use a number as the index!")
+            return
+        except futures.TimeoutError:
+            await ctx.send(f"{WARNING} You have not entered a selection!")
+            return
+
+        if not 0 < index < 6:
+            await ctx.send(f"{WARNING} The index must be from 1-5!")
+            return
+
+        selected = results[index-1]
+
+        voice = ctx.guild.me.voice
+        if not voice or not voice.channel:
+            try:
+                await mp.link.connect(ctx.author.voice.channel)
+            except commands.BotMissingPermissions:
+                await ctx.send(f"{ERROR} I am unable to connect to **{ctx.author.voice.channel.name}**, "
+                               f"check if the permissions are correct!")
+                return
+
+        pos = await mp.add_track(selected, ctx.author)
+        if pos == -1:
+            await ctx.send(f"{NOTES} **Added** `{selected.title}` to be played now")
+            return
+        await ctx.send(f"{NOTES} **Added** `{selected.title}` to position: `{pos+1}`")
 
     @commands.command(aliases=["np", "nowplaying"])
     @music_check(playing=True)
