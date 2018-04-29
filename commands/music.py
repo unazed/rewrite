@@ -29,14 +29,6 @@ class Music:
             should_shuffle = True
             query = "".join(splitted[1:])
 
-        if query == "init0":
-            # easter egg?
-            query = "https://www.youtube.com/playlist?list=PLzME6COik-H9hSsEuvAf26uQAN228ESck"
-        elif ctx.guild.id in self.bot.bot_settings.patrons.values():
-            settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-            if settings.aliases and query in settings.aliases:
-                query = settings.aliases[query]
-
         voice = ctx.guild.me.voice
         if not voice or not voice.channel:
             try:
@@ -45,6 +37,23 @@ class Music:
                 await ctx.send(f"{ERROR} I am unable to connect to **{ctx.author.voice.channel.name}**, "
                                f"check if the permissions are correct!")
                 return
+
+        if query == "init0":
+            # easter egg?
+            query = "https://www.youtube.com/playlist?list=PLzME6COik-H9hSsEuvAf26uQAN228ESck"
+        elif query == "autoplay":
+            settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+            if settings.autoplay == "NONE":
+                await ctx.send(f"{WARNING} An autoplay playlist has not been set yet, "
+                               f"set one with: `.settings autoplay [link/default]`")
+            else:
+                await mp.load_autoplay(settings.autoplay)
+                await ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
+            return
+        elif ctx.guild.id in self.bot.bot_settings.patrons.values():
+            settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+            if settings.aliases and query in settings.aliases:
+                query = settings.aliases[query]
 
         if query.startswith("http"):
             results = await mp.link.get_tracks(query)
@@ -152,7 +161,7 @@ class Music:
         paginator = QueuePaginator(ctx=ctx, music_player=mp, page=page)
         await paginator.send_to_channel()
 
-    @commands.command(aliases=["s"])
+    @commands.command(aliases=["s", "voteskip"])
     @music_check(playing=True)
     async def skip(self, ctx):
         mp = self.mpm.get_music_player(ctx, False)
@@ -204,10 +213,9 @@ class Music:
     @commands.command(aliases=["jumpto", "jump"])
     @music_check(in_channel=True, playing=True, is_dj=True)
     async def skipto(self, ctx, pos: int):
-        pos -= 1
         mp = self.mpm.get_music_player(ctx, False)
-        await mp.skip_to(pos)
-        await ctx.send(f"{SUCCESS} The current song has been skipped to pos: {pos}")
+        await mp.skip_to(pos-1)
+        await ctx.send(f"{SUCCESS} The current song has been skipped to position: {pos}")
 
     @commands.command(aliases=["fskip", "modskip"])
     @music_check(in_channel=True, playing=True, is_dj=True)
@@ -218,15 +226,35 @@ class Music:
 
     @commands.command(aliases=["mov"])
     @music_check(in_channel=True, playing=True, is_dj=True)
-    async def move(self, ctx, to_moved: int, pos: int = 1):
+    async def move(self, ctx, *, args):
         mp = self.mpm.get_music_player(ctx, False)
-        queue_len = len(mp.queue)
-        to_moved -= 1
+        queue = mp.queue
+        queue_len = len(queue)
+
+        to_move = args
+        pos = 1
+        splitted = args.split()
+        if splitted[-1].isdecimal() and len(splitted) > 1:
+            pos = int(splitted[-1])
+            to_move = " ".join(splitted[:-1])
+
+        try:
+            to_move = int(to_move)
+            to_move -= 1
+        except ValueError:
+            for i in range(queue_len):
+                if to_move.lower() in queue[i].track.title.lower():
+                    to_move = i
+                    break
+            else:
+                await ctx.send(f"{WARNING} No song found with that name!")
+                return
+
         pos -= 1
-        if not (0 <= to_moved < queue_len) and not (0 <= pos <= queue_len):
+        if not (0 <= to_move < queue_len) and not (0 <= pos <= queue_len):
             await ctx.send(f"{WARNING} The specified positions must be from `0-{queue_len}`!")
             return
-        moved = mp.move(to_moved, pos)
+        moved = mp.move(to_move, pos)
         if pos == 0:
             await ctx.send(f"{SUCCESS} The track: {moved} has been moved to be played next")
         else:

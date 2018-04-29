@@ -11,8 +11,8 @@ from utils.visual import NOTES, COLOR
 
 
 class MusicQueue:
-    def __init__(self, items=deque()):
-        self.items = items
+    def __init__(self, items=None):
+        self.items = items if items else deque()
 
     def __len__(self):
         return self.items.__len__()
@@ -47,14 +47,16 @@ class MusicQueue:
         self.items.insert(position, item)
         return position
 
-    def remove(self, item):
-        return self.items.remove(item)
+    def remove(self, to_remove):
+        removed = self.items[to_remove]
+        self.items.remove(removed)
+        return removed
 
     def shorten(self, start):
         self.items = deque(itertools.islice(self.items, start, self.__len__()))
 
     def clear(self):
-        return self.items.clear()
+        self.items.clear()
 
     def move(self, to_move, pos):
         moved = self.items[to_move]
@@ -103,6 +105,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     def clear(self):
         self.queue.clear()
+        self.repeat_queue.clear()
 
     def remove(self, to_remove):
         return self.queue.remove(to_remove)
@@ -110,7 +113,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
     def move(self, to_move, pos):
         return self.queue.move(to_move, pos)
 
-    async def music_chan(self):
+    async def get_music_chan(self):
         settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
         text_id = settings.textId
         return self.guild.get_channel(text_id)
@@ -177,7 +180,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.skips.clear()
         self.repeat_queue.append(self.current)
         topic = f"{NOTES} **Now playing** {self.current}"
-        music_channel = await self.music_chan()
+        music_channel = await self.get_music_chan()
         tms = await self.tms()
         if music_channel:
             if tms:
@@ -201,10 +204,10 @@ class MusicPlayer(AbstractPlayerEventAdapter):
                 self.repeat_queue = deque()
             elif settings.autoplay != "NONE" and not self.autoplaying:
                 await self.load_autoplay(settings.autoplay)
-                music_channel = await self.music_chan()
+                music_channel = await self.get_music_chan()
                 tms = await self.tms()
                 if music_channel and tms:
-                    await self.ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
+                    await music_channel.send(f"{NOTES} **Added** the autoplay playlist to the queue")
 
         if not self.queue.empty:
             self.current = self.queue.pop_left()

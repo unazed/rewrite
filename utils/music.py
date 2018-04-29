@@ -31,7 +31,7 @@ class Enqueued:
         self.requester = requester
 
     def __str__(self):
-        return f"`{self.track.title}` ({format_time(self.track.duration)})"
+        return f"{self.track.title} `{format_time(self.track.duration)}`"
 
 
 class QueuePaginator(Paginator):
@@ -75,6 +75,9 @@ def music_check(**kwargs):
     is_donor = kwargs.pop("is_donor", "")
 
     async def predicate(ctx):
+        if ctx.author.id in ctx.bot.bot_settings.owners:
+            return True
+
         if not ctx.guild:
             raise CustomCheckFailure(f"{WARNING} This command is guild only")
 

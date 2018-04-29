@@ -57,7 +57,7 @@ class Settings:
 
     @settings.command()
     @perm_check()
-    async def dj(self, ctx, role):
+    async def dj(self, ctx, *, role):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if role.lower() == "none":
             settings.djroleId = "NONE"
@@ -77,7 +77,7 @@ class Settings:
 
     @settings.command()
     @perm_check()
-    async def tc(self, ctx, channel):
+    async def tc(self, ctx, *, channel):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if channel.lower() == "none":
             settings.textId = "NONE"
@@ -96,7 +96,7 @@ class Settings:
 
     @settings.command()
     @perm_check()
-    async def vc(self, ctx, channel):
+    async def vc(self, ctx, *, channel):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if channel.lower() == "none":
             settings.voiceId = "NONE"
@@ -115,7 +115,7 @@ class Settings:
 
     @settings.command(aliases=["ap"])
     @perm_check()
-    async def autoplay(self, ctx, link):
+    async def autoplay(self, ctx, *, link):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if link.lower() == "none":
             settings.autoplay = "NONE"

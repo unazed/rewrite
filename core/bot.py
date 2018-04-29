@@ -35,6 +35,9 @@ class Bot(commands.AutoShardedBot):
             return
 
         logging.getLogger("discord").setLevel(logging.WARNING)
+        logging.getLogger("magma").setLevel(logging.DEBUG)
+        logging.getLogger('websockets').setLevel(logging.INFO)
+
         self.logger.info("!! Logged in !!")
         self.remove_command("help")
 
@@ -78,6 +81,7 @@ class Bot(commands.AutoShardedBot):
         exc_table = {
             commands.MissingRequiredArgument: f"{WARNING} The required arguments are missing for this command!",
             commands.NoPrivateMessage: f"{WARNING} This command cannot be used in PM's!",
+            commands.BadArgument: f"{WARNING} A bad argument was passed, please check if your arguments are correct!",
             CustomCheckFailure: getattr(exception, "msg", None) or "None"
         }
 
