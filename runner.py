@@ -2,10 +2,13 @@
 import asyncio
 import logging
 
+import uvloop
+
 from core.bot import Bot
 from utils.DB import SettingsDB
 from utils.magma.core import node
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 loop = asyncio.get_event_loop()
 
 

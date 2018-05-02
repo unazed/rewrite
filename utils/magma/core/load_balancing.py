@@ -59,17 +59,17 @@ class Penalties:
             return
 
         if self.lavalink:
-            # reee complexity levels
+            # REEEEE complexity levels
             for link in self.lavalink.links.values():
                 if self.node == await link.get_node() and link.player.current and not link.player.paused:
                     self.player_penalty += 1
         else:
             self.player_penalty = stats.playing_players
 
-        self.cpu_penalty = 1.05 ** (100 * stats.system_load * 10 - 10)
+        self.cpu_penalty = 1.05 ** (100 * stats.system_load) * 10 - 10
         if stats.avg_frame_deficit != -1:
-            self.deficit_frame_penalty = 1.03 ** (500 * (stats.avg_frame_deficit / 3000) * 600 - 600)
-            self.null_frame_penalty = 1.03 ** (500 * (stats.avg_frame_nulled / 3000) * 300 - 300)
+            self.deficit_frame_penalty = (1.03 ** (500 * (stats.avg_frame_deficit / 3000))) * 600 - 600
+            self.null_frame_penalty = (1.03 ** (500 * (stats.avg_frame_nulled / 3000))) * 300 - 300
             self.null_frame_penalty *= 2
 
         if not self.node.available or not self.node.stats:

@@ -8,7 +8,7 @@ from discord.ext import commands
 from audio.player_manager import MusicPlayerManager
 from utils.DB import SettingsDB
 from utils.exceptions import CustomCheckFailure
-from utils.magma.core import NodeException
+from utils.magma.core import NodeException, IllegalAction
 from utils.visual import WARNING
 
 
@@ -17,9 +17,12 @@ class Bot(commands.AutoShardedBot):
     @staticmethod
     def prefix_from(bot, msg):
         # must be an instance of this bot pls dont use anything else
-        if not msg.guild:
-            return bot.bot_settings.prefix
-        return bot.prefix_map.get(msg.guild.id, bot.bot_settings.prefix)
+        prefixes = set()
+        if msg.guild:
+            prefixes.add(bot.prefix_map.get(msg.guild.id, bot.bot_settings.prefix))
+        else:
+            prefixes.add(bot.bot_settings.prefix)
+        return commands.when_mentioned_or(*prefixes)(bot, msg)
 
     def __init__(self, bot_settings, **kwargs):
         super().__init__(Bot.prefix_from, **kwargs)
@@ -34,9 +37,9 @@ class Bot(commands.AutoShardedBot):
         if self.ready:
             return
 
-        logging.getLogger("discord").setLevel(logging.WARNING)
         logging.getLogger("magma").setLevel(logging.DEBUG)
         logging.getLogger('websockets').setLevel(logging.INFO)
+        logging.getLogger("discord").setLevel(logging.WARNING)
 
         self.logger.info("!! Logged in !!")
         self.remove_command("help")
@@ -49,10 +52,14 @@ class Bot(commands.AutoShardedBot):
             except NodeException as e:
                 self.logger.error(f"{node} - {e.args[0]}")
 
-        prefix_servers = SettingsDB.get_instance().guild_settings_col.find({
-            "$and": [{"prefix": {"$exists": True}},
-                     {"prefix": {"$ne": "NONE"}}]
-        })
+        prefix_servers = SettingsDB.get_instance().guild_settings_col.find(
+            {
+                "$and": [
+                        {"prefix": {"$exists": True}},
+                        {"prefix": {"$ne": "NONE"}}
+                        ]
+            }
+        )
 
         async for i in prefix_servers:
             self.prefix_map[i["_id"]] = i["prefix"]
@@ -82,12 +89,11 @@ class Bot(commands.AutoShardedBot):
             commands.MissingRequiredArgument: f"{WARNING} The required arguments are missing for this command!",
             commands.NoPrivateMessage: f"{WARNING} This command cannot be used in PM's!",
             commands.BadArgument: f"{WARNING} A bad argument was passed, please check if your arguments are correct!",
+            IllegalAction: f"{WARNING} A node error has occurred: `{getattr(exception, 'msg', None)}`",
             CustomCheckFailure: getattr(exception, "msg", None) or "None"
         }
 
         if exc_class in exc_table.keys():
-            msg = await ctx.send(exc_table[exc_class])
-            await asyncio.sleep(5)
-            await msg.delete()
+            await ctx.send(exc_table[exc_class])
         else:
             await super().on_command_error(ctx, exception)

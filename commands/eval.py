@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 from discord.ext import commands
 
 from utils.DB import SettingsDB
-from utils.misc import (cleanup_code, get_syntax_error)
+from utils.misc import cleanup_code, get_syntax_error
 
 
 class Eval(object):

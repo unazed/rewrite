@@ -7,10 +7,7 @@ from discord.ext import commands
 from utils.DB import SettingsDB
 from utils.magma.core import format_time
 from utils.music import music_check, QueuePaginator
-from utils.visual import ERROR, COLOR
-from utils.visual import NOTES
-from utils.visual import SUCCESS
-from utils.visual import WARNING
+from utils.visual import ERROR, COLOR, NOTES, SUCCESS, WARNING
 
 
 class Music:
@@ -25,7 +22,7 @@ class Music:
         splitted = query.split()
         should_shuffle = False
 
-        if splitted[0] == "shuffle":
+        if splitted[0] in ("shuffle", "sh"):
             should_shuffle = True
             query = "".join(splitted[1:])
 
@@ -38,14 +35,13 @@ class Music:
                                f"check if the permissions are correct!")
                 return
 
-        if query == "init0":
-            # easter egg?
+        if query == "init0":  # easter egg?
             query = "https://www.youtube.com/playlist?list=PLzME6COik-H9hSsEuvAf26uQAN228ESck"
         elif query == "autoplay":
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
             if settings.autoplay == "NONE":
                 await ctx.send(f"{WARNING} An autoplay playlist has not been set yet, "
-                               f"set one with: `.settings autoplay [link/default]`")
+                               f"set one with: `.settings autoplay [DEFAULT/link]`")
             else:
                 await mp.load_autoplay(settings.autoplay)
                 await ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
@@ -64,7 +60,7 @@ class Music:
             await ctx.send(f"{WARNING} No results found!")
             return
 
-        if query.startswith("http") and len(results) > 1:
+        if query.startswith("http") and len(results) != 1:
             if should_shuffle:
                 random.shuffle(results)
             for track in results:
@@ -165,7 +161,7 @@ class Music:
     @music_check(playing=True)
     async def skip(self, ctx):
         mp = self.mpm.get_music_player(ctx, False)
-        listeners = list(filter(lambda m: not m.bot and not (m.voice.deaf or m.voice.self_deaf),
+        listeners = list(filter(lambda m: not (m.bot or m.voice.deaf or m.voice.self_deaf),
                                 ctx.guild.me.voice.channel.members))
         skips_needed = round(len(listeners) * 0.5)
         current_skips = len(mp.skips)
@@ -204,11 +200,22 @@ class Music:
 
     @commands.command(aliases=["r", "delete"])
     @music_check(in_channel=True, playing=True, is_dj=True)
-    async def remove(self, ctx, pos: int):
-        pos -= 1
-        mp = self.mpm.get_music_player(ctx, False)
-        track = mp.remove(pos)
-        await ctx.send(f"{SUCCESS} The track: `{track.track.title}` has been removed")
+    async def remove(self, ctx, *positions: int):
+        pos_len = len(positions)
+        if pos_len == 1:
+            pos = positions[0]
+            pos -= 1
+            mp = self.mpm.get_music_player(ctx, False)
+            track = mp.remove(pos)
+            await ctx.send(f"{SUCCESS} The track: `{track.track.title}` has been removed")
+        else:
+            positions = [*positions]
+            positions.sort(reverse=True)
+            for pos in positions:
+                pos -= 1
+                mp = self.mpm.get_music_player(ctx, False)
+                mp.remove(pos)
+            await ctx.send(f"{SUCCESS} Removed `{pos_len}` entries")
 
     @commands.command(aliases=["jumpto", "jump"])
     @music_check(in_channel=True, playing=True, is_dj=True)
@@ -233,6 +240,7 @@ class Music:
 
         to_move = args
         pos = 1
+
         splitted = args.split()
         if splitted[-1].isdecimal() and len(splitted) > 1:
             pos = int(splitted[-1])
@@ -251,7 +259,7 @@ class Music:
                 return
 
         pos -= 1
-        if not (0 <= to_move < queue_len) and not (0 <= pos <= queue_len):
+        if not (0 <= to_move < queue_len) or not (0 <= pos <= queue_len):
             await ctx.send(f"{WARNING} The specified positions must be from `0-{queue_len}`!")
             return
         moved = mp.move(to_move, pos)

@@ -7,7 +7,7 @@ from utils.DB import SettingsDB
 from utils.magma.core import TrackPauseEvent, TrackResumeEvent, TrackStartEvent, TrackEndEvent, \
     AbstractPlayerEventAdapter, TrackExceptionEvent, TrackStuckEvent, format_time
 from utils.music import UserData, Enqueued
-from utils.visual import NOTES, COLOR
+from utils.visual import NOTES, COLOR, WARNING
 
 
 class MusicQueue:
@@ -82,6 +82,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.autoplaying = False
         self.current = None
         self.previous = None
+        self.previous_np_msg = None
 
         link.player.event_adapter = self
 
@@ -184,7 +185,9 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         tms = await self.tms()
         if music_channel:
             if tms:
-                await music_channel.send(topic)
+                if self.previous_np_msg:
+                    await self.previous_np_msg.delete()
+                self.previous_np_msg = await music_channel.send(topic)
             try:
                 await music_channel.edit(topic=topic)
             except:
@@ -192,6 +195,8 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def track_end(self, event: TrackEndEvent):
         user_data = event.track.user_data
+        music_channel = await self.get_music_chan()
+
         if not user_data.may_start_next:
             return
 
@@ -204,7 +209,6 @@ class MusicPlayer(AbstractPlayerEventAdapter):
                 self.repeat_queue = deque()
             elif settings.autoplay != "NONE" and not self.autoplaying:
                 await self.load_autoplay(settings.autoplay)
-                music_channel = await self.get_music_chan()
                 tms = await self.tms()
                 if music_channel and tms:
                     await music_channel.send(f"{NOTES} **Added** the autoplay playlist to the queue")
@@ -218,17 +222,20 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         if self.guild.id not in self.bot.bot_settings.patrons.values():
             await self.link.disconnect()
 
-        settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
-        text_id = settings.textId
-        music_channel = self.guild.get_channel(text_id)
         if music_channel:
             try:
                 await music_channel.edit(topic="Not playing anything right now...")
-            except:
+            except discord.Forbidden:
                 pass
 
     async def track_exception(self, event: TrackExceptionEvent):
-        pass
+        music_channel = await self.get_music_chan()
+        msg = f"{WARNING} An exception for the track **{event.track.title}** has occurred: `{event.exception}`"
+
+        if music_channel:
+            await music_channel.send(msg)
+        else:
+            await self.ctx.send(msg)
 
     async def track_stuck(self, event: TrackStuckEvent):
         pass
