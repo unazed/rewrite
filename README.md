@@ -2,3 +2,6 @@
 
 Implemented in Python using discord.py rewrite and magma
 
+
+
+This is just here for reference, it's not meant to be plug and play
