@@ -38,12 +38,15 @@ class MusicQueue:
         # look at this one liner
         position = len(set(map(lambda i: i.requester, self.items)))
         last_index = 0
-        for index in range(self.__len__()-1, 0, -1):
+        queue_len = self.__len__()
+        for index in range(queue_len-1, 0, -1):
             if self.items[index].requester == item.requester:
                 last_index = index
                 break
 
         position += last_index
+        if position > queue_len:
+            position = queue_len
         self.items.insert(position, item)
         return position
 
@@ -184,11 +187,11 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         music_channel = await self.get_music_chan()
         tms = await self.tms()
         if music_channel:
-            if tms:
-                if self.previous_np_msg:
-                    await self.previous_np_msg.delete()
-                self.previous_np_msg = await music_channel.send(topic)
             try:
+                if tms:
+                    if self.previous_np_msg:
+                        await self.previous_np_msg.delete()
+                    self.previous_np_msg = await music_channel.send(topic)
                 await music_channel.edit(topic=topic)
             except:
                 pass
@@ -230,7 +233,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     async def track_exception(self, event: TrackExceptionEvent):
         music_channel = await self.get_music_chan()
-        msg = f"{WARNING} An exception for the track **{event.track.title}** has occurred: `{event.exception}`"
+        msg = f"{WARNING} An exception has occurred for the track: **{event.track.title}**: `{event.exception}`"
 
         if music_channel:
             await music_channel.send(msg)

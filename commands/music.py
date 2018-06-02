@@ -149,29 +149,15 @@ class Music:
 
     @commands.command(aliases=["q", "songlist"])
     @music_check(playing=True)
-    async def queue(self, ctx, page=0):
+    async def queue(self, ctx, page=1):
         mp = self.mpm.get_music_player(ctx, False)
         if not mp.queue:
             await ctx.send(f"{WARNING} No songs are in the queue!")
             return
-        paginator = QueuePaginator(ctx=ctx, music_player=mp, page=page)
+        if page < 0:
+            page = 1
+        paginator = QueuePaginator(ctx=ctx, music_player=mp, page=page-1)
         await paginator.send_to_channel()
-
-    @commands.command(aliases=["s", "voteskip"])
-    @music_check(playing=True)
-    async def skip(self, ctx):
-        mp = self.mpm.get_music_player(ctx, False)
-        listeners = list(filter(lambda m: not (m.bot or m.voice.deaf or m.voice.self_deaf),
-                                ctx.guild.me.voice.channel.members))
-        skips_needed = round(len(listeners) * 0.5)
-        current_skips = len(mp.skips)
-        if mp.current.requester == ctx.author or current_skips + 1 >= skips_needed:
-            await mp.skip()
-            await ctx.send(f"{SUCCESS} The current song has been skipped")
-        else:
-            mp.skips.add(ctx.author)
-            await ctx.send(f"{SUCCESS} You have voted to skip this song, "
-                           f"`{current_skips-skips_needed}` more skips are needed to skip")
 
     @commands.command(aliases=["sh"])
     @music_check(playing=True, is_dj=True)
@@ -217,6 +203,22 @@ class Music:
                 mp.remove(pos)
             await ctx.send(f"{SUCCESS} Removed `{pos_len}` entries")
 
+    @commands.command(aliases=["s", "voteskip"])
+    @music_check(playing=True)
+    async def skip(self, ctx):
+        mp = self.mpm.get_music_player(ctx, False)
+        listeners = list(filter(lambda m: not (m.bot or m.voice.deaf or m.voice.self_deaf),
+                                ctx.guild.me.voice.channel.members))
+        skips_needed = round(len(listeners) * 0.5)
+        current_skips = len(mp.skips)
+        if mp.current.requester == ctx.author or current_skips + 1 >= skips_needed:
+            await mp.skip()
+            await ctx.send(f"{SUCCESS} The current song has been skipped")
+        else:
+            mp.skips.add(ctx.author)
+            await ctx.send(f"{SUCCESS} You have voted to skip this song, "
+                           f"`{current_skips-skips_needed}` more skips are needed to skip")
+
     @commands.command(aliases=["jumpto", "jump"])
     @music_check(in_channel=True, playing=True, is_dj=True)
     async def skipto(self, ctx, pos: int):
@@ -231,7 +233,7 @@ class Music:
         await mp.skip()
         await ctx.send(f"{SUCCESS} The current song has been skipped")
 
-    @commands.command(aliases=["mov"])
+    @commands.command(aliases=["mov", ".playafter"])
     @music_check(in_channel=True, playing=True, is_dj=True)
     async def move(self, ctx, *, args):
         mp = self.mpm.get_music_player(ctx, False)

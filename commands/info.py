@@ -46,11 +46,11 @@ class Info:
 
     @commands.command(aliases=["botinfo", "stats"])
     async def info(self, ctx):
-        playing_servers = len(self.bot.mpm.find_all(lambda pair: pair[1].player.is_playing))
+        playing_guilds = self.bot.mpm.lavalink.playing_guilds
 
         embed = discord.Embed(title="Himebot - Statistics", colour=COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
-        embed.add_field(name="Playing on", value=f"{playing_servers}", inline=True)  # placeholder
+        embed.add_field(name="Playing on", value=f"{playing_guilds}", inline=True)  # placeholder
         embed.add_field(name="Server Count", value=f"{len(self.bot.guilds)}", inline=True)
         embed.add_field(name="Uptime", value=f"{str(datetime.now()-self.bot.start_time).split('.')[0]}",
                         inline=True)  # Do this later

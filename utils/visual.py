@@ -3,7 +3,7 @@ from asyncio import futures
 import discord
 import math
 
-COLOR = 0x728fff
+COLOR = 0xFF3F3F
 SUCCESS = "\u2611"
 WARNING = "\u26A0"
 ERROR = "\u274C"

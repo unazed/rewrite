@@ -23,7 +23,10 @@ class SettingsDB:
         return BotSettings(document.get("_id"), **document)
 
     async def set_bot_settings(self, settings):
-        return await self.bot_settings_col.replace_one({"_id": 0}, settings.__dict__, True)
+        bs_dict = settings.__dict__
+        if "patrons" in bs_dict:
+            bs_dict.pop("patrons")
+        return await self.bot_settings_col.replace_one({"_id": 0}, bs_dict, True)
 
     async def get_guild_settings(self, id):
         document = await self.guild_settings_col.find_one({"_id": id})

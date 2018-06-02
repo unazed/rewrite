@@ -23,14 +23,18 @@ class Eval(object):
         result = ""
 
         self.context.update({
-            "self": ctx.guild.me,
             "ctx": ctx,
             "ch": ctx.channel,
             "author": ctx.author,
-            "guild": ctx.guild,
             "msg": ctx.message,
             "_": self.last_result
         })
+
+        if ctx.guild:
+            self.context.update({
+                "self": ctx.guild.me,
+                "guild": ctx.guild
+            })
 
         try:
             with redirect_stdout(stdout):

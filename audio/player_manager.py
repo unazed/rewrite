@@ -29,8 +29,7 @@ class MusicPlayerManager:
         if member.bot or member.guild.id not in self.music_players:
             return
 
-        mp = self.music_players[member.guild.id]
-        bot_voice = mp.guild.me.voice
+        bot_voice = member.guild.me.voice
         if not bot_voice or not bot_voice.channel:
             return
 
