@@ -47,35 +47,38 @@ class Paginator:
 
     async def send_to_channel(self):
         while True:
-            if self.msg:
-                await self.msg.edit(embed=self.embed)
-                if self.pages_needed < 2:
+            try:
+                if self.msg:
+                    await self.msg.edit(embed=self.embed)
+                    if self.pages_needed < 2:
+                        await self.msg.clear_reactions()
+                        break
+                else:
+                    self.msg = await self.ctx.send(embed=self.embed)
+                    if self.pages_needed < 2:
+                        break
+                    await self.msg.add_reaction(ARROW_LEFT)
+                    await self.msg.add_reaction(STOP)
+                    await self.msg.add_reaction(ARROW_RIGHT)
+
+                try:
+                    reaction, user = await self.bot.wait_for("reaction_add", check=self.check, timeout=self.timeout)
+                except futures.TimeoutError:
                     await self.msg.clear_reactions()
                     break
-            else:
-                self.msg = await self.ctx.send(embed=self.embed)
-                if self.pages_needed < 2:
+
+                if reaction.emoji == ARROW_LEFT:
+                    self.page -= 1
+                    self.page %= self.pages_needed
+                elif reaction.emoji == ARROW_RIGHT:
+                    self.page += 1
+                    self.page %= self.pages_needed
+                elif reaction.emoji == STOP:
+                    await self.msg.clear_reactions()
                     break
-                await self.msg.add_reaction(ARROW_LEFT)
-                await self.msg.add_reaction(STOP)
-                await self.msg.add_reaction(ARROW_RIGHT)
-            try:
-                reaction, user = await self.bot.wait_for("reaction_add", check=self.check, timeout=self.timeout)
-            except futures.TimeoutError:
-                await self.msg.clear_reactions()
-                break
 
-            if reaction.emoji == ARROW_LEFT:
-                self.page -= 1
-                self.page %= self.pages_needed
-            elif reaction.emoji == ARROW_RIGHT:
-                self.page += 1
-                self.page %= self.pages_needed
-            elif reaction.emoji == STOP:
-                await self.msg.clear_reactions()
-                break
-
-            try:
                 await self.msg.remove_reaction(reaction.emoji, user)
+
             except discord.Forbidden:
-                pass
+                await self.ctx.send(f"{ERROR} This feature might not work properly because"
+                                    f" I have no permissions to add/clear reactions!")

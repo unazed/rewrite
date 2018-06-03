@@ -29,10 +29,9 @@ class Enqueued:
     def __init__(self, track, requester):
         self.track = track
         self.requester = requester
-        self.finished = False
 
     def __str__(self):
-        return f"`{self.track.title}` ({format_time(self.track.duration)})"
+        return f"{self.track.title} `{format_time(self.track.duration)}`"
 
 
 class QueuePaginator(Paginator):
@@ -76,11 +75,14 @@ def music_check(**kwargs):
     is_donor = kwargs.pop("is_donor", "")
 
     async def predicate(ctx):
+        if ctx.author.id in ctx.bot.bot_settings.owners:
+            return True
+
         if not ctx.guild:
             raise CustomCheckFailure(f"{WARNING} This command is guild only")
 
         if is_donor:
-            bot_settings = await SettingsDB.get_instance().get_bot_settings()
+            bot_settings = ctx.bot.bot_settings
             if is_donor == "contributors" and ctx.guild.id not in bot_settings.contributors.values():
                 raise CustomCheckFailure(f"{WARNING} This command is for patrons who have donated for the "
                                          f"**contributor** and above tier only. If you want to become a patron, "

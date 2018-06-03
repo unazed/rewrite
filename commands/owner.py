@@ -1,10 +1,9 @@
 import asyncio
 
 import aiohttp
-import discord
 from discord.ext import commands
 
-from utils.visual import ERROR, ARROW_LEFT, ARROW_RIGHT, STOP
+from utils.visual import ERROR
 from utils.visual import SUCCESS
 
 
