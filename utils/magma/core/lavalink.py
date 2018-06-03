@@ -34,6 +34,14 @@ class Lavalink:
 
         self.bot.add_listener(self.on_socket_response)
 
+    @property
+    def playing_guilds(self):
+        count = 0
+        for node in self.nodes.values():
+            if node.stats and node.stats.playing_players:
+                count += node.stats.playing_players
+        return count
+
     async def on_socket_response(self, data):
         if not data.get("t") in ("VOICE_SERVER_UPDATE", "VOICE_STATE_UPDATE"):
             return
@@ -75,14 +83,13 @@ class Lavalink:
         await node.connect()
         self.nodes[name] = node
 
-    async def get_best_node(self, guild):
+    async def get_best_node(self):
         """
-        Determines the best Node for a guild based on penalty calculations
+        Determines the best Node based on penalty calculations
 
-        :param guild: The guild
         :return: A Node
         """
-        return await self.load_balancer.determine_best_node(guild)
+        return await self.load_balancer.determine_best_node()
 
 
 class Link:
@@ -92,6 +99,7 @@ class Link:
         self.guild = guild
         self.state = State.NOT_CONNECTED
         self.last_voice_update = {}
+        self.last_session_id = None
         self._player = None
         self.node = None
 
@@ -116,7 +124,7 @@ class Link:
                 "op": "voiceUpdate",
                 "event": data["d"],
                 "guildId": data["d"]["guild_id"],
-                "sessionId": self.guild.me.voice.session_id
+                "sessionId": self.last_session_id
             })
             node = await self.get_node(True)
             await node.send(self.last_voice_update)
@@ -128,6 +136,7 @@ class Link:
                 return
 
             channel_id = data["d"]["channel_id"]
+            self.last_session_id = data["d"]["session_id"]
             if not channel_id and self.state != State.DESTROYED:
                 self.state = State.NOT_CONNECTED
                 if self.node:
@@ -138,19 +147,22 @@ class Link:
                     await self.node.send(payload)
                 self.node = None
 
-    async def get_tracks(self, query, ytsearch=True):
+    async def get_tracks(self, query):
         """
         Get a list of AudioTracks from a query
 
         :param query: The query to pass to the Node
-        :param ytsearch: A boolean that indicates if it should search on YouTube
         :return:
         """
-        if ytsearch:
-            query = f"ytsearch:{query}"
         node = await self.get_node(True)
         tracks = await node.get_tracks(query)
         return [AudioTrack(track) for track in tracks]
+
+    async def get_tracks_yt(self, query):
+        return await self.get_tracks("ytsearch:" + query)
+
+    async def get_tracks_sc(self, query):
+        return await self.get_tracks("scsearch:" + query)
 
     async def get_node(self, select_if_absent=False):
         """
@@ -160,7 +172,7 @@ class Link:
         :return: A Node
         """
         if select_if_absent and not self.node:
-            self.node = await self.lavalink.get_best_node(self.guild)
+            self.node = await self.lavalink.get_best_node()
             if self.player:
                 await self.player.node_changed()
         return self.node
@@ -193,7 +205,7 @@ class Link:
         me = channel.guild.me
         permissions = me.permissions_in(channel)
         if not permissions.connect and not permissions.move_members:
-            raise BotMissingPermissions(permissions.connect)
+            raise BotMissingPermissions(["connect"])
 
         self.set_state(State.CONNECTING)
         payload = {

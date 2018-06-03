@@ -7,22 +7,18 @@ from utils.DB import SettingsDB
 from utils.magma.core import TrackPauseEvent, TrackResumeEvent, TrackStartEvent, TrackEndEvent, \
     AbstractPlayerEventAdapter, TrackExceptionEvent, TrackStuckEvent, format_time
 from utils.music import UserData, Enqueued
-from utils.visual import NOTES, COLOR
+from utils.visual import NOTES, COLOR, WARNING
 
 
 class MusicQueue:
-    def __init__(self, items=deque()):
-        self.items = items
+    def __init__(self, items=None):
+        self.items = items if items else deque()
 
     def __len__(self):
-        return len(self.items)
+        return self.items.__len__()
 
     def __getitem__(self, item):
         return self.items[item]
-
-    @property
-    def size(self):
-        return self.__len__()
 
     @property
     def empty(self):
@@ -38,14 +34,32 @@ class MusicQueue:
         self.items.append(item)
         return self.index(item)
 
-    def remove(self, item):
-        return self.items.remove(item)
+    def fair_put(self, item):
+        # look at this one liner
+        position = len(set(map(lambda i: i.requester, self.items)))
+        last_index = 0
+        queue_len = self.__len__()
+        for index in range(queue_len-1, 0, -1):
+            if self.items[index].requester == item.requester:
+                last_index = index
+                break
+
+        position += last_index
+        if position > queue_len:
+            position = queue_len
+        self.items.insert(position, item)
+        return position
+
+    def remove(self, to_remove):
+        removed = self.items[to_remove]
+        self.items.remove(removed)
+        return removed
 
     def shorten(self, start):
-        self.items = deque(itertools.islice(self.items, start, self.size))
+        self.items = deque(itertools.islice(self.items, start, self.__len__()))
 
     def clear(self):
-        return self.items.clear()
+        self.items.clear()
 
     def move(self, to_move, pos):
         moved = self.items[to_move]
@@ -69,9 +83,9 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.repeat_queue = deque()
         self.paused = False
         self.autoplaying = False
-        self.autoplayed = False
         self.current = None
         self.previous = None
+        self.previous_np_msg = None
 
         link.player.event_adapter = self
 
@@ -95,6 +109,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
 
     def clear(self):
         self.queue.clear()
+        self.repeat_queue.clear()
 
     def remove(self, to_remove):
         return self.queue.remove(to_remove)
@@ -102,7 +117,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
     def move(self, to_move, pos):
         return self.queue.move(to_move, pos)
 
-    async def music_chan(self):
+    async def get_music_chan(self):
         settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
         text_id = settings.textId
         return self.guild.get_channel(text_id)
@@ -127,8 +142,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
             self.queue.put(enqueued)
             await self.player.stop()
             return -1
-        self.queue.put(enqueued)
-        return self.queue.index(enqueued)
+        return self.queue.fair_put(enqueued)
 
     async def stop(self):
         self.current = None
@@ -143,7 +157,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         await self.player.stop()
 
     async def skip_to(self, pos):
-        self.player.current.user_data = UserData.SKIPPED
+        self.player.current.user_data = UserData.SKIPPED_TO
         self.queue.shorten(pos)
         await self.player.stop()
 
@@ -154,7 +168,7 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         else:
             playlist = identifier
 
-        tracks = await self.link.get_tracks(playlist, False)
+        tracks = await self.link.get_tracks(playlist)
         shuffle(tracks)
         for track in tracks:
             await self.add_track(track, self.guild.me)
@@ -170,51 +184,60 @@ class MusicPlayer(AbstractPlayerEventAdapter):
         self.skips.clear()
         self.repeat_queue.append(self.current)
         topic = f"{NOTES} **Now playing** {self.current}"
-        music_channel = await self.music_chan()
+        music_channel = await self.get_music_chan()
         tms = await self.tms()
         if music_channel:
-            if tms:
-                await music_channel.send(topic)
             try:
+                if tms:
+                    if self.previous_np_msg:
+                        await self.previous_np_msg.delete()
+                    self.previous_np_msg = await music_channel.send(topic)
                 await music_channel.edit(topic=topic)
             except:
                 pass
 
     async def track_end(self, event: TrackEndEvent):
-        user_data = event.track.user_data
+        music_channel = await self.get_music_chan()
+
+        if not (event.track or event.track.user_data.may_start_next):
+            return
+
         self.previous = self.current
-        if user_data.may_start_next:
-            if self.queue.empty:
-                settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
+        if self.queue.empty:
+            settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
 
-                if settings.repeat:
-                    self.queue = MusicQueue(self.repeat_queue)
-                    self.repeat_queue = deque()
-                elif settings.autoplay != "NONE" and not self.autoplaying:
-                    await self.load_autoplay(settings.autoplay)
-                    music_channel = await self.music_chan()
-                    tms = await self.tms()
-                    if music_channel and tms:
-                        await self.ctx.send(f"{NOTES} **Added** the autoplay playlist to the queue")
+            if settings.repeat:
+                self.queue = MusicQueue(self.repeat_queue)
+                self.repeat_queue = deque()
+            elif settings.autoplay != "NONE" and not self.autoplaying:
+                await self.load_autoplay(settings.autoplay)
+                tms = await self.tms()
+                if music_channel and tms:
+                    await music_channel.send(f"{NOTES} **Added** the autoplay playlist to the queue")
 
-            if not self.queue.empty:
-                self.current = self.queue.pop_left()
-                await self.player.play(self.current.track)
-                return
+        if not self.queue.empty:
+            self.current = self.queue.pop_left()
+            await self.player.play(self.current.track)
+            return
 
+        await self.stop()
         if self.guild.id not in self.bot.bot_settings.patrons.values():
-            await self.stop()
-        settings = await SettingsDB.get_instance().get_guild_settings(self.guild.id)
-        text_id = settings.textId
-        music_channel = self.guild.get_channel(text_id)
+            await self.link.disconnect()
+
         if music_channel:
             try:
                 await music_channel.edit(topic="Not playing anything right now...")
-            except:
+            except discord.Forbidden:
                 pass
 
     async def track_exception(self, event: TrackExceptionEvent):
-        pass
+        music_channel = await self.get_music_chan()
+        msg = f"{WARNING} An exception has occurred for the track: **{event.track.title}**: `{event.exception}`"
+
+        if music_channel:
+            await music_channel.send(msg)
+        else:
+            await self.ctx.send(msg)
 
     async def track_stuck(self, event: TrackStuckEvent):
         pass

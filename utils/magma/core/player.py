@@ -46,9 +46,17 @@ class Player:
             return min(self._position + diff, self.current.duration)
         return min(self._position, self.current.duration)
 
+    def reset(self):
+        self.current = None
+        self.update_time = -1
+        self._position = -1
+
     async def provide_state(self, state):
         self.update_time = state["time"]
-        self._position = state["position"]
+        if "position" in state:
+            self._position = state["position"]
+            return
+        self.reset()
 
     async def seek_to(self, position):
         """
@@ -76,8 +84,6 @@ class Player:
         :param pause: A boolean that indicates the pause state
         :return:
         """
-        if pause == self.paused:
-            return
 
         payload = {
             "op": "pause",
@@ -87,7 +93,6 @@ class Player:
 
         node = await self.link.get_node(True)
         await node.send(payload)
-        self.paused = pause
 
         if pause:
             await self.trigger_event(TrackPauseEvent(self))

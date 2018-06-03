@@ -29,8 +29,7 @@ class BotSettings(Settings):
         self.autoplayPlaylist = kwargs.get("autoplayPlaylist")
         self.token = kwargs.get("token")
         self.geniusToken = kwargs.get("geniusToken")
-        self.lavaPass = kwargs.get("lavaPass")
-        self.lavaHost = kwargs.get("lavaHost")
+        self.lavaNodes = kwargs.get("lavaNodes")
         self.contributors = kwargs.get("contributors")
         self.ballers = kwargs.get("ballers")
         self.patrons = {**self.ballers, **self.contributors}
