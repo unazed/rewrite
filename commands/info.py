@@ -47,11 +47,11 @@ class Info:
     @commands.command(aliases=["botinfo", "stats"])
     async def info(self, ctx):
         playing_guilds = self.bot.mpm.lavalink.playing_guilds
-
+        guild_count = sum(i["guild_count"] for i in self.bot.shard_stats.values())
         embed = discord.Embed(title="Himebot - Statistics", colour=COLOR)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
-        embed.add_field(name="Playing on", value=f"{playing_guilds}", inline=True)  # placeholder
-        embed.add_field(name="Server Count", value=f"{len(self.bot.guilds)}", inline=True)
+        embed.add_field(name="Playing on", value=f"{playing_guilds:,}", inline=True)  # placeholder
+        embed.add_field(name="Server Count", value=f"{guild_count:,}", inline=True)
         embed.add_field(name="Uptime", value=f"{str(datetime.now()-self.bot.start_time).split('.')[0]}",
                         inline=True)  # Do this later
         if ctx.guild:
@@ -63,7 +63,7 @@ class Info:
         e = discord.Embed(description=
                           ("[Add to your server](https://discordapp.com/oauth2/authorize"
                            "?client_id=232916519594491906&scope=bot&permissions=40)\n"
-                           "[Join Hime's server](https://discord.gg/tfAMfX4)\n"
+                           "[Join Hime's server](https://discord.gg/BCAF7rH)\n"
                            "[Hime's Website](https://himebot.xyz/)\n"
                            "[Hime's Patreon](https://www.patreon.com/himebot)"),
                           colour=COLOR)

@@ -1,8 +1,18 @@
 import aiohttp
 import bs4 as bs4
 import discord
+from discord.ext import commands
 
+from .exceptions import CustomCheckFailure
 from .visual import Paginator
+
+
+def is_owner():
+    def predicate(ctx):
+        if ctx.message.author.id not in ctx.bot.bot_settings.owners:
+            raise CustomCheckFailure("Not for you :PP")
+        return True
+    return commands.check(predicate)
 
 
 def split_str(string, split_at=2000):

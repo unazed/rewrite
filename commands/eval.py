@@ -6,17 +6,22 @@ from contextlib import redirect_stdout
 from discord.ext import commands
 
 from utils.DB import SettingsDB
-from utils.misc import cleanup_code, get_syntax_error
+from utils.misc import cleanup_code, get_syntax_error, is_owner
 
 
 class Eval(object):
     def __init__(self, bot):
         self.bot = bot
-        self.context = {"bot": self.bot, "db": SettingsDB.get_instance(), "bs": self.bot.bot_settings}
         self.last_result = None
+        self.context = {
+            "bot": self.bot,
+            "db": SettingsDB.get_instance(),
+            "bs": self.bot.bot_settings,
+            "mpm": self.bot.mpm
+        }
     
     @commands.command(aliases=["e"])
-    @commands.is_owner()
+    @is_owner()
     async def eval(self, ctx, *, code: str):
         code = cleanup_code(code)
         stdout = io.StringIO()

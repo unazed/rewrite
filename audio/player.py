@@ -197,10 +197,9 @@ class MusicPlayer(AbstractPlayerEventAdapter):
                 pass
 
     async def track_end(self, event: TrackEndEvent):
-        user_data = event.track.user_data
         music_channel = await self.get_music_chan()
 
-        if not user_data.may_start_next:
+        if not (event.track or event.track.user_data.may_start_next):
             return
 
         self.previous = self.current

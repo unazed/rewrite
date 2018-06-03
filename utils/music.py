@@ -82,7 +82,7 @@ def music_check(**kwargs):
             raise CustomCheckFailure(f"{WARNING} This command is guild only")
 
         if is_donor:
-            bot_settings = ctx.bot.bot_settings
+            bot_settings = await SettingsDB.get_instance().get_bot_settings()
             if is_donor == "contributors" and ctx.guild.id not in bot_settings.contributors.values():
                 raise CustomCheckFailure(f"{WARNING} This command is for patrons who have donated for the "
                                          f"**contributor** and above tier only. If you want to become a patron, "

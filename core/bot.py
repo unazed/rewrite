@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import datetime
 
+import discord
 from discord.ext import commands
 
 from audio.player_manager import MusicPlayerManager
@@ -12,9 +13,7 @@ from utils.magma.core import NodeException, IllegalAction
 from utils.visual import WARNING
 
 
-class Bot(commands.AutoShardedBot):
-
-    shards = {}
+class Bot(commands.Bot):
 
     @staticmethod
     def prefix_from(bot, msg):
@@ -26,22 +25,22 @@ class Bot(commands.AutoShardedBot):
             prefixes.add(bot.bot_settings.prefix)
         return commands.when_mentioned_or(*prefixes)(bot, msg)
 
-    def __init__(self, bot_settings, shard_clusters, **kwargs):
-        super().__init__(Bot.prefix_from, owner_id=bot_settings.owners[0], **kwargs)
-        self.shard_clusters = shard_clusters
-        self.ready = False
+    def __init__(self, bot_settings, shard_stats, **kwargs):
+        super().__init__(Bot.prefix_from, **kwargs)
+        self.shard_stats = shard_stats
         self.logger = logging.getLogger("bot")
         self.start_time = datetime.now()
         self.bot_settings = bot_settings
         self.prefix_map = {}
+        self.ready = False
         self.mpm = None
         self.remove_command("help")
 
+    @property
     def stats(self):
         return {
             "guild_count": len(self.guilds),
-            "member_count": len(*self.get_all_members())
-                }
+        }
 
     async def load_everything(self):
         await self.load_all_nodes()
@@ -81,14 +80,21 @@ class Bot(commands.AutoShardedBot):
         if self.ready:
             return
 
-        logging.getLogger("magma").setLevel(logging.DEBUG)
+        logging.getLogger("magma").setLevel(logging.INFO)
         logging.getLogger('websockets').setLevel(logging.INFO)
         logging.getLogger("discord.client").setLevel(logging.WARNING)
+        logging.getLogger("discord.gateway").setLevel(logging.ERROR)
 
         await self.load_everything()
+        await self.change_presence(activity=discord.Game(name=self.bot_settings.game))
 
         self.logger.info("!! Logged in !!")
         self.ready = True
+
+        while True:
+            # The first shard number is the identifier
+            self.shard_stats[self.shard_id] = self.stats
+            await asyncio.sleep(60)
 
     async def on_message(self, msg):
         if not msg.author.bot:
@@ -96,7 +102,7 @@ class Bot(commands.AutoShardedBot):
 
     async def on_command_error(self, ctx, exception):
         exc_class = exception.__class__
-        if exc_class in (commands.CommandNotFound, commands.NotOwner):
+        if exc_class in (commands.CommandNotFound, commands.NotOwner, discord.Forbidden):
             return
 
         exc_table = {
@@ -110,6 +116,7 @@ class Bot(commands.AutoShardedBot):
         if exc_class in exc_table.keys():
             await ctx.send(exc_table[exc_class])
         else:
+            self.logger.error(f"Exception in guild: {ctx.guild.name} | {ctx.guild.id}, shard: {self.shard_id}")
             await super().on_command_error(ctx, exception)
 
     def run(self, *args, **kwargs):

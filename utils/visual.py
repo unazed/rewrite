@@ -80,5 +80,4 @@ class Paginator:
                 await self.msg.remove_reaction(reaction.emoji, user)
 
             except discord.Forbidden:
-                await self.ctx.send(f"{ERROR} This feature might not work properly because"
-                                    f" I have no permissions to add/clear reactions!")
+                pass

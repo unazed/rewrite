@@ -14,16 +14,13 @@ node.tries = 1
 node.timeout = 2
 
 
-def run(bs, manager, shard_count):
-    controller = ShardController(bs, shard_count)
-    controller.start_shards(manager)
-
-
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
+    mp_manager = mp.Manager()
+
     db = SettingsDB.get_instance()
     bot_settings = loop.run_until_complete(db.get_bot_settings())
+    shards = 1#44
 
-    mp.set_start_method("spawn")
-    manager = mp.Manager()
-    run(bot_settings, manager, 8)
-
+    controller = ShardController(bot_settings, (*range(shards),), shards)
+    controller.start_shards(mp_manager)

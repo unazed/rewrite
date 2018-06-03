@@ -15,6 +15,19 @@ class Music:
         self.bot = bot
         self.mpm = bot.mpm
 
+    @commands.command(aliases=["join"])
+    @music_check(in_channel=True)
+    async def connect(self, ctx):
+        mp = self.mpm.get_music_player(ctx)
+        voice = ctx.guild.me.voice
+
+        if not voice or not voice.channel:
+            try:
+                await mp.link.connect(ctx.author.voice.channel)
+            except commands.BotMissingPermissions:
+                await ctx.send(f"{ERROR} I am unable to connect to **{ctx.author.voice.channel.name}**, "
+                               f"check if the permissions are correct!")
+
     @commands.command(aliases=["pl"])
     @music_check(in_channel=True)
     async def play(self, ctx, *, query: str):
@@ -187,21 +200,24 @@ class Music:
     @commands.command(aliases=["r", "delete"])
     @music_check(in_channel=True, playing=True, is_dj=True)
     async def remove(self, ctx, *positions: int):
-        pos_len = len(positions)
-        if pos_len == 1:
-            pos = positions[0]
-            pos -= 1
-            mp = self.mpm.get_music_player(ctx, False)
-            track = mp.remove(pos)
-            await ctx.send(f"{SUCCESS} The track: `{track.track.title}` has been removed")
-        else:
-            positions = [*positions]
-            positions.sort(reverse=True)
-            for pos in positions:
+        try:
+            pos_len = len(positions)
+            if pos_len == 1:
+                pos = positions[0]
                 pos -= 1
                 mp = self.mpm.get_music_player(ctx, False)
-                mp.remove(pos)
-            await ctx.send(f"{SUCCESS} Removed `{pos_len}` entries")
+                track = mp.remove(pos)
+                await ctx.send(f"{SUCCESS} The track: `{track.track.title}` has been removed")
+            else:
+                positions = [*positions]
+                positions.sort(reverse=True)
+                for pos in positions:
+                    pos -= 1
+                    mp = self.mpm.get_music_player(ctx, False)
+                    mp.remove(pos)
+                await ctx.send(f"{SUCCESS} Removed `{pos_len}` entries")
+        except IndexError:
+            await ctx.send(f"{WARNING} The specified position(s) are outside the queue length!")
 
     @commands.command(aliases=["s", "voteskip"])
     @music_check(playing=True)
